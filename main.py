@@ -4,7 +4,7 @@ import sched, time
 from fetchStats import fetchStats
 # from debugUtils import saysomething
 import sqlUtils
-import datetime
+from minutesSince import minutesSince
 
 app = Flask(__name__)
 
@@ -15,10 +15,7 @@ scheduler.init_app(app)
 
 @app.route("/")
 def index():
-    return render_template('index.html', players_online=sqlUtils.get_latest_stats()[2], last_updated=sqlUtils.get_latest_stats()[1])
-
-(datetime.datetime.now() - (datetime.datetime(sqlUtils.get_latest_stats()[1])).total_seconds()) / 60
-
+    return render_template('index.html', players_online=sqlUtils.get_latest_stats()[2], last_updated=minutesSince(sqlUtils.get_latest_stats()[1]))
 
 @app.route("/player/<username>")
 def playerStats(username):
@@ -27,7 +24,7 @@ def playerStats(username):
 @app.route("/stats_test")
 def stats_test():
     fetchStats()
-    return f'<p>Latest stats: {sqlUtils.get_latest_stats()[3]}</p>'
+    return f'<p>Latest stats: {sqlUtils.get_latest_stats()[2]}</p>'
 
 if __name__ == '__main__':
     # Add the job

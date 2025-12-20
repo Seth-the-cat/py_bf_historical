@@ -5,15 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blockfront historical</title>
     <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/master.css')}}"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div id="menu">
     <h1>Blockfront Historical</h1>
     <ul id="topinfo">
         <li><strong>{{players_online}}</strong> players online</li>
-        <li>Last updated {{last_updated}}</li>
+        <li>Last updated: {{last_updated}} minutes ago</li>
         <li><a href="https://github.com/seth-the-cat">Github</a></li>
     </ul>
     </div>
+    <main>
+        <canvas id="activityGraph"></canvas>
+    </main>
 </body>
 </html>

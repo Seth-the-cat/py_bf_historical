@@ -18,8 +18,8 @@ def get_json(url: str, params: Optional[Dict[str, Any]] = None, timeout: float =
 
 def fetchCloudStats():
     data = get_json("https://blockfrontapi.vuis.dev/api/v1/cloud_data")
-    print("Fetched cloud stats")
-    print("\n\nStoring stats in database...")
+    print("\nFetch Process: Fetched cloud stats")
+    print("\nFetch Process: Storing stats in database...")
     data_tuple = (
         datetime.now().isoformat(),
         data.get("players_online"),
