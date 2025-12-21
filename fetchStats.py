@@ -32,28 +32,47 @@ def fetchCloudStats():
     )
     sqlUtils.add_stats(data_tuple)
 
-def fetchMatchStats(name):
-    data = get_json("https://blockfrontapi.vuis.dev/api/v1/player_status?name=" + name)
-    if data.get("online") == False:
+def fetchMatchStats(name: str):
+    def gen_html_from_players(players):
+        rows = "".join(
+            f"<tr><td>{p.get('username')}</td>"
+            f"<td>{p.get('Prestige', 0)}</td>"
+            f"<td>{p.get('Rank')}</td>"
+            f"<td>{p.get('kills', 0)}</td>"
+            f"<td>{p.get('deaths', 0)}</td>"
+            f"<td>{round(p.get('kills', 0) / p.get('deaths', 1) if p.get('deaths', 0) > 0 else 0, 4)}</td></tr>"
+            for p in players
+        )
+        return "<table><tr><th>Username</th><th>Prestige</th><th>Rank</th><th>Kills</th><th>Deaths</th><th>KDR</th></tr>" + rows + "</table>"
+
+    data = get_json(f"https://blockfrontapi.vuis.dev/api/v1/player_status?name={name}")
+
+    if not data.get("online"):
         print("Player is offline.")
         return f"{name} is offline."
-    if not data.get('match'):
+    match = data.get("match")
+    if not match:
         print("No match data found for player.")
         return "Name not found or player is not in a match."
-    bulk_uuid = []
-    count = 0
-    for test in data.get('match').get('players'):
-        print(test['uuid'])
-        count += 1
-        bulk_uuid.append(test['uuid'])
+
+    uuids = [p["uuid"] for p in match.get("players", [])]
     print("\nFetch Process: Fetched player UUIDs")
-    print(str(bulk_uuid).strip("[]").replace("'", "").replace(" ", ""))
-    players_in_match_data=requests.post("https://blockfrontapi.vuis.dev/api/v1/player_data/bulk", data=str(bulk_uuid).strip("[]").replace("'", "").replace(" ", ""))
+    uuids_str = ",".join(uuids)
+    print(uuids_str)
 
-    return players_in_match_data.json(), count
+    resp = requests.post("https://blockfrontapi.vuis.dev/api/v1/player_data/bulk", data=uuids_str).json()
+    players_in_match = [
+        {
+            "username": p.get("username"),
+            "kills": p.get("kills", 0),
+            "deaths": p.get("deaths", 0),
+            "Rank": p.get("rank"),
+            "Prestige": p.get("prestige", 0),
+        }
+        for p in resp
+    ]
 
-if __name__ == "__main__":
-    fetchMatchStats("SleepNeeded24_7")
+    return gen_html_from_players(players_in_match), f"{len(players_in_match)} out of {match.get('max_players')} players in match."
 
 def fetchStats():
     fetchCloudStats()

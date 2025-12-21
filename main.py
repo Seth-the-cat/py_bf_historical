@@ -28,8 +28,8 @@ def index():
 
 @app.route("/player/<username>")
 def playerStats(username):
-    match_data, players_in_match = fetchMatchStats(username)
-    return render_template('player.html', username=username, match_data=match_data, players_in_match=players_in_match)
+    match_html, players_in_match = fetchMatchStats(username)
+    return render_template('player.html', username=username, match_html=match_html, players_in_match=players_in_match)
 
 @app.route("/stats_test")
 def stats_test():

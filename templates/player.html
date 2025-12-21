@@ -12,7 +12,7 @@
         <div id="menu">
             <h1>Blockfront Historical</h1>
             <ul id="topinfo">
-                <li><strong>{{players_in_match}}</strong> players online</li>   
+                <li>{{players_in_match|safe}}</li>   
                 <li><a href="https://github.com/seth-the-cat/py_bf_historical">Github</a></li>
             </ul>
         </div>
@@ -20,8 +20,8 @@
 
     <main>
     <div id="player-stats">
-        <h2>Stats for player <strong>{{username}}</strong></h2>
-        <pre>{{ match_data }}</pre>
+        <h2>Match Player stats for {{username}}</h2>
+        {{ match_html|safe }}
     </div>
     </main>
 </body>

@@ -13,7 +13,8 @@
             <h1>Blockfront Historical</h1>
             <ul id="topinfo">
                 <li><strong>{{players_online}}</strong> players online</li>
-                <li onclick="location.reload()" style="cursor: pointer">Last updated: {{last_updated}} minutes ago</li>    
+                <li onclick="location.reload()" style="cursor: pointer">Last updated: {{last_updated}} minutes ago</li>
+                <li>Search player match: <input onkeyup="if(event.key==='Enter'){location.href='/player/'+this.value};" type="text"></input></li>   
                 <li><a href="https://github.com/seth-the-cat/py_bf_historical">Github</a></li>
             </ul>
         </div>

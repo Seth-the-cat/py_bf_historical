@@ -27,5 +27,11 @@ Main goals:
 - [ ] Make page with session stats
 
 ### Maybe Overlay / match stats grabber
-Like a bedwars overlay but for blockfront.
-Will need to see how laggy or slow this is.
+> [!NOTE]
+> Like a bedwars overlay but for blockfront.
+
+> [!WARNING]
+> Parial implementation currently.
+
+You can search for a player (i.e yourself), then it pulls up the match players with some stats.
+

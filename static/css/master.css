@@ -40,3 +40,8 @@ a:hover {
     color: black;
     background-color: white;
 }
+table, th, td {
+    border: 1px solid white;
+    border-collapse: collapse;
+    padding: 5px;
+}
