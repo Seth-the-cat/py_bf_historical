@@ -1,23 +1,17 @@
 # Blockfront Historical
 Website for viewing Blockfront stats overtime
 
-Fonts: https://github.com/IdreesInc/Minecraft-Font
-
 ## TODO
 Main goals:
-- [ ] Fetch cloud stats and graph
-    - [ ] Top 10 players by score
-    - [ ] Amount of players online
-    - [ ] Amount of players in each gamemode
-    - [ ] Graph: x = time, y = players online
+- [x] Fetch cloud stats and graph
+- [ ] Top 10 players by score
 - [ ] Make a way to specify players to log
 - [ ] Session stats
 
 ### Cloud stats 
 - [x] Create table for cloud stats
-    - [ ] Rename 'stats' to 'cloud_stats'
 - [x] Create job to fetch cloud stats
-- [ ] Make page with cloud stats graph and table
+- [x] Make page with cloud stats graph and table
 
 ### Player stats
 - [ ] Create table for player stats

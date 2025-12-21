@@ -14,7 +14,7 @@ def create_connection(db_file):
     except sqlite3.Error as e:
         print(e)
     try:
-        conn.cursor().execute("CREATE TABLE stats (id integer PRIMARY KEY, date text, players_online integer, players_in_dom integer, players_in_tdm integer, players_in_inf integer, players_in_gg integer, players_in_ttt integer, players_in_boot integer)")
+        conn.cursor().execute("CREATE TABLE cloud_stats (id integer PRIMARY KEY, date text, players_online integer, players_in_dom integer, players_in_tdm integer, players_in_inf integer, players_in_gg integer, players_in_ttt integer, players_in_boot integer)")
     except sqlite3.Error as e:
         print(e)
 
@@ -28,7 +28,7 @@ def add_stats(stats):
     :param stats:
     :return: stats id
     """
-    sql = ''' INSERT INTO stats(date, players_online, players_in_dom, players_in_tdm, players_in_inf, players_in_gg, players_in_ttt, players_in_boot)
+    sql = ''' INSERT INTO cloud_stats(date, players_online, players_in_dom, players_in_tdm, players_in_inf, players_in_gg, players_in_ttt, players_in_boot)
               VALUES(?,?,?,?,?,?,?,?) '''
     cur = conn.cursor()
     cur.execute(sql, stats)
@@ -43,7 +43,7 @@ def get_all_stats():
     :return:
     """
     cur = conn.cursor()
-    cur.execute("SELECT * FROM stats")
+    cur.execute("SELECT * FROM cloud_stats")
 
     rows = cur.fetchall()
 
@@ -57,7 +57,7 @@ def get_latest_stats():
     :return:
     """
     cur = conn.cursor()
-    cur.execute("SELECT * FROM stats ORDER BY id DESC LIMIT 1")
+    cur.execute("SELECT * FROM cloud_stats ORDER BY id DESC LIMIT 1")
 
     row = cur.fetchone()
 
@@ -71,7 +71,7 @@ def two_cols_of_stats():
     :return:
     """
     cur = conn.cursor()
-    cur.execute("SELECT date, players_online FROM stats")
+    cur.execute("SELECT date, players_online FROM cloud_stats")
 
     rows = cur.fetchall()
 
@@ -85,7 +85,7 @@ def two_cols_of_stats():
 def graph_data():   
     conn = create_connection("stats.db")
     """
-    Query date and players_online columns from stats table
+    Query date and players_online columns from cloud_stats table
     :param conn: the Connection object
     :return:
     """
@@ -109,7 +109,7 @@ def clear_stats():
     :return:
     """
     cur = conn.cursor()
-    cur.execute("DELETE FROM stats")
+    cur.execute("DELETE FROM cloud_stats")
     conn.commit()
 
 if __name__ == '__main__':
