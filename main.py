@@ -1,34 +1,31 @@
 from flask import Flask, render_template
-from flask_apscheduler import APScheduler
-import sched, time
 from fetchStats import fetchStats
-# from debugUtils import saysomething
 import sqlUtils
 from minutesSince import minutesSince
 
 app = Flask(__name__)
 
-scheduler = APScheduler()
-scheduler.init_app(app)
-
-# run function
-
 @app.route("/")
 def index():
+    try:
+        latest_stats = sqlUtils.get_latest_stats()
+        players_online = latest_stats[2]
+        last_updated = minutesSince(latest_stats[1])
+        raw_data = sqlUtils.graph_data()
+    except TypeError:
+        fetchStats()
+        latest_stats = sqlUtils.get_latest_stats()
+        players_online = latest_stats[2]
+        last_updated = minutesSince(latest_stats[1])
+        raw_data = sqlUtils.graph_data()
+    except Exception as e:
+        return f"<p>Error retrieving stats: {e}</p>"
     return render_template('index.html',
-    players_online=sqlUtils.get_latest_stats()[2],
-    last_updated=minutesSince(sqlUtils.get_latest_stats()[1]),
-    raw_data=sqlUtils.graph_data()
+    players_online=players_online,
+    last_updated=last_updated,
+    raw_data=raw_data
     )
 
 if __name__ == '__main__':
-    fetchStats()  # Fetch stats once at startup
-    # Add the job
-    scheduler.add_job(id='Scheduled Task', func=fetchStats, trigger='interval', minutes=10)
-    
-    # Start the scheduler
-    scheduler.start()
-    
-    # Start the Flask server
-    # use_reloader=False is important! Otherwise, the scheduler might run twice.
+    # You can keep this specifically for local testing if you want
     app.run(debug=True, use_reloader=False)
