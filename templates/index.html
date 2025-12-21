@@ -15,7 +15,7 @@
             <ul id="topinfo">
                 <li><strong>{{players_online}}</strong> players online</li>
                 <li>Last updated: {{last_updated}} minutes ago</li>
-                <li><a href="https://github.com/seth-the-cat">Github</a></li>
+                <li><a href="https://github.com/seth-the-cat/py_bf_historical">Github</a></li>
             </ul>
         </div>
     </nav>
@@ -33,6 +33,14 @@ const plot = Plot.plot({
         backgroundColor: "#000000",
         color: "#ffffff",
         overflow: "visible"
+    },
+    x: {
+        label: "Date",
+        grid: true
+    },
+    y: {
+        label: "Players Online",
+        grid: true
     },
     // Remove the global 'tip: true' to avoid conflicts
     // tip: true, 

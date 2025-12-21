@@ -1,5 +1,5 @@
 # Blockfront Historical
-Website for viewing Blockfront stats overtime
+Website for viewing Blockfront stats overtime. This utilzes vuis's API for interacting with blockfronts internal API.
 
 ## Contributors
 @Seth-the-cat, @xeovis
