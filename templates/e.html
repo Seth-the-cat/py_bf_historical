@@ -4,65 +4,187 @@
         color: white;
         background-color: black;
     }
+    /* Chart container + tooltip */
+    #myplot { position: relative; }
+    .tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      display: none;
+      box-shadow: 0 0 6px rgba(255,255,255,0.04);
+      white-space: nowrap;
+    }
+    .line { fill: none; stroke-width: 1.5px; }
 </style>
+
 <div id="myplot"></div>
 <script type="module">
 
-import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
-const data = {{raw_data | safe}};
+// raw data injected by server
+const raw = {{raw_data | safe}};
 
-const plot = Plot.plot({
-    color: {legend: true},
-    style: {
-        backgroundColor: "#000000",
-        color: "#ffffff",
-        overflow: "visible"
-    },
-    // Remove the global 'tip: true' to avoid conflicts
-    // tip: true, 
-    marks: [
-        // --- Your Existing Lines ---
-        Plot.lineY(data, {x: "Date", y: "Players", stroke: () => "Players", marker: "circle"}),
-        Plot.lineY(data, {x: "Date", y: "Dom", stroke: () => "Dom", marker: "circle"}),
-        Plot.lineY(data, {x: "Date", y: "TDM", stroke: () => "TDM", marker: "circle"}),
-        Plot.lineY(data, {x: "Date", y: "Inf", stroke: () => "Inf", marker: "circle"}),
-        Plot.lineY(data, {x: "Date", y: "GG", stroke: () => "GG", marker: "circle"}),
-        Plot.lineY(data, {x: "Date", y: "TTT", stroke: () => "TTT", marker: "circle"}),
-        Plot.lineY(data, {x: "Date", y: "Boot", stroke: () => "Boot", marker: "circle"}),
+// parse data and normalize numeric fields
+raw.forEach(d => {
+  d.date = new Date(d.Date);
+  d.Players = +d.Players;
+  d.Dom = +d.Dom;
+  d.TDM = +d.TDM;
+  d.Inf = +d.Inf;
+  d.GG = +d.GG;
+  d.TTT = +d.TTT;
+  d.Boot = +d.Boot;
+});
 
-        // --- NEW: Interaction Layer ---
-        
-        // 1. Vertical Guide Line (Follows mouse)
-        Plot.ruleX(data, Plot.pointerX({
-            x: "Date", 
-            stroke: "white", 
-            strokeOpacity: 0.2
-        })),
+const keys = ["Players","Dom","TDM","Inf","GG","TTT","Boot"];
+const series = keys.map(k => ({ id: k, values: raw.map(d => ({date: d.date, value: d[k]})) }));
 
-        // 2. The Tooltip (aggregates all columns)
-        Plot.tip(data, Plot.pointerX({
-            x: "Date",
-            y: "Players", // Anchors the tooltip box to the 'Players' line height
-            fill: "black",      // Background color
-            stroke: "#feffff",  // Text color
-            strokeWidth: 1,     // Make text crisp
-            
-            // This function creates the text inside the tooltip
-            title: (d) => `Players online on ${d.Date}\n
-Total Players: ${d.Players}
-Domination: ${d.Dom}
-Team Death Match: ${d.TDM}
-Infected: ${d.Inf}
-Gun Game: ${d.GG}
-Terrorist in Tratior Town: ${d.TTT}
-Bootcamp: ${d.Boot}`
-        }),
-    )
-    ]
-})
+// dimensions
+const margin = {top: 20, right: 20, bottom: 30, left: 50};
+const container = document.querySelector('#myplot');
+container.innerHTML = '';
+const width = Math.max(700, container.clientWidth || 900) - margin.left - margin.right;
+const height = 400 - margin.top - margin.bottom;
 
-const div = document.querySelector("#myplot");
-div.append(plot);
+const svg = d3.select('#myplot')
+  .append('svg')
+  .attr('width', width + margin.left + margin.right)
+  .attr('height', height + margin.top + margin.bottom)
+  .style('background', 'black')
+  .append('g')
+  .attr('transform', `translate(${margin.left},${margin.top})`);
+
+// x domain: initial view is last 24 hours
+const now = new Date();
+const oneDayAgo = new Date(now.getTime() - 24*60*60*1000);
+
+// full data bounds
+const minDate = d3.min(raw, d => d.date);
+const maxDate = d3.max(raw, d => d.date);
+
+const x = d3.scaleTime()
+  .domain([oneDayAgo, now])
+  .range([0, width]);
+
+// y domain across all series
+const yMax = d3.max(raw, d => Math.max(d.Players, d.Dom, d.TDM, d.Inf, d.GG, d.TTT, d.Boot));
+const y = d3.scaleLinear()
+  .domain([0, yMax])
+  .nice()
+  .range([height, 0]);
+
+const color = d3.scaleOrdinal(d3.schemeCategory10).domain(keys);
+
+// axes
+const xAxisG = svg.append('g')
+  .attr('transform', `translate(0,${height})`)
+  .attr('class','x-axis')
+  .call(d3.axisBottom(x).ticks(d3.timeHour.every(2)).tickFormat(d3.timeFormat('%H:%M')))
+  .selectAll('text').style('fill','white');
+
+const yAxisG = svg.append('g')
+  .attr('class','y-axis')
+  .call(d3.axisLeft(y))
+  .selectAll('text').style('fill','white');
+
+// line generator
+const lineGen = d3.line()
+  .x(d => x(d.date))
+  .y(d => y(d.value))
+  .curve(d3.curveMonotoneX);
+
+// clipping
+svg.append('clipPath').attr('id','clip').append('rect').attr('width', width).attr('height', height);
+
+const linesG = svg.append('g').attr('clip-path','url(#clip)');
+
+linesG.selectAll('path')
+  .data(series)
+  .enter()
+  .append('path')
+  .attr('class','line')
+  .attr('d', d => lineGen(d.values))
+  .style('stroke', d => color(d.id))
+  .style('fill','none');
+
+// overlay for pointer & zoom
+const overlay = svg.append('rect')
+  .attr('width', width)
+  .attr('height', height)
+  .style('fill','none')
+  .style('pointer-events','all');
+
+// tooltip + vertical line
+const focus = svg.append('g').style('display','none');
+focus.append('line').attr('class','vline').attr('y1',0).attr('y2',height).style('stroke','#fff').style('stroke-opacity',0.7);
+
+const tooltip = d3.select('#myplot').append('div').attr('class','tooltip');
+
+const bisectDate = d3.bisector(d => d.date).left;
+
+// compute pixel x positions for full data range (for translateExtent)
+const minXpix = x(minDate);
+const maxXpix = x(maxDate);
+
+const zoom = d3.zoom().extent([[0,0],[width,height]]).on('zoom', zoomed);
+
+// const zoom = d3.zoom()
+//   .scaleExtent([1, 50])
+//   .translateExtent([[Math.min(minXpix - width, -1e6), -Infinity], [Math.max(maxXpix + width, 1e6), Infinity]])
+//   .extent([[0,0],[width,height]])
+//   .on('zoom', zoomed);
+
+overlay.call(zoom);
+
+// dblclick to reset to initial 24h view
+overlay.on('dblclick', () => {
+  overlay.transition().duration(600).call(zoom.transform, d3.zoomIdentity);
+});
+
+// zoom handler
+function zoomed(event) {
+  const t = event.transform;
+  let newX = t.rescaleX(x);
+
+  // clamp domain to available data range (so user can't pan to empty space)
+  let dom = newX.domain();
+  let clamped = false;
+  if (dom[0] < minDate) { const delta = minDate - dom[0]; dom[0] = minDate; dom[1] = new Date(dom[1].getTime() + delta); clamped = true; }
+  if (dom[1] > maxDate) { const delta = dom[1] - maxDate; dom[1] = maxDate; dom[0] = new Date(dom[0].getTime() - delta); clamped = true; }
+
+  // if clamped, build a fresh scale using clamped domain; else use newX directly
+  const useX = clamped ? d3.scaleTime().domain(dom).range([0, width]) : newX;
+
+  // update axis and lines
+  svg.select('.x-axis').call(d3.axisBottom(useX).ticks(d3.timeHour.every(2)).tickFormat(d3.timeFormat('%H:%M')));
+  linesG.selectAll('.line').attr('d', d => d3.line().x(d2 => useX(d2.date)).y(d2 => y(d2.value))(d.values));
+}
+
+// pointer interactions
+overlay.on('mouseover', () => { focus.style('display', null); tooltip.style('display','block'); })
+  .on('mouseout', () => { focus.style('display','none'); tooltip.style('display','none'); })
+  .on('mousemove', (event) => {
+    // get current transform & scale so pointer aligns with zoom/pan
+    const transform = d3.zoomTransform(overlay.node());
+    const currX = transform.rescaleX(x);
+
+    const [mx] = d3.pointer(event);
+    const x0 = currX.invert(mx);
+    const i = bisectDate(raw, x0);
+    const d0 = raw[i-1] || raw[i];
+    if (!d0) return;
+
+    const px = currX(d0.date);
+    focus.attr('transform', `translate(${px},0)`);
+
+    tooltip.html(`Time: ${d0.date.toLocaleString()}<br/>` + keys.map(k => `${k}: ${d0[k]}`).join('<br/>'))
+      .style('left', (event.pageX + 12) + 'px')
+      .style('top', (event.pageY - 28) + 'px');
+  });
 
 </script>

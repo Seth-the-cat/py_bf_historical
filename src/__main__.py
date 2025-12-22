@@ -1,6 +1,6 @@
 from flask import Flask, render_template
-from src.fetchStats import fetchStats, fetchMatchStats
-import src.utils.sql as sqlUtils
+from fetchStats import fetchStats, fetchMatchStats
+import utils.sql as sqlUtils
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
