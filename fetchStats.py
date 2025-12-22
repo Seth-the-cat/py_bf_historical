@@ -51,7 +51,7 @@ def fetchMatchStats(name: str):
     resp = requests.post("https://blockfrontapi.vuis.dev/api/v1/player_data/bulk", data=uuids_str).json()
     players_in_match = [
         {
-            "username": p.get("username"),
+            "username": p.get("username") + " <img src='https://mc-heads.net/avatar/" +p.get("username") + "' width='20' height='20'>",
             "kills": p.get("kills", 0),
             "deaths": p.get("deaths", 0),
             "Rank": p.get("rank"),
