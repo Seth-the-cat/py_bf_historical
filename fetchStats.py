@@ -33,6 +33,13 @@ def fetchCloudStats():
     )
     sqlUtils.add_stats(data_tuple)
 
+def addMuted(json):
+    print(json)
+    if json == {}:
+        return ''
+    else:
+        return ' 🔇'
+
 def fetchMatchStats(name: str):
     data = get_json(f"https://blockfrontapi.vuis.dev/api/v1/player_status?name={name}")
 
@@ -51,7 +58,7 @@ def fetchMatchStats(name: str):
     resp = requests.post("https://blockfrontapi.vuis.dev/api/v1/player_data/bulk", data=uuids_str).json()
     players_in_match = [
         {
-            "username": p.get("username") + " <img src='https://mc-heads.net/avatar/" +p.get("username") + "' width='20' height='20'>",
+            "username": p.get("username") + " <img src='https://mc-heads.net/avatar/" +p.get("username") + "' width='20' height='20'>" + addMuted(p.get("punishments")['active']),
             "kills": p.get("kills", 0),
             "deaths": p.get("deaths", 0),
             "Rank": p.get("rank"),
