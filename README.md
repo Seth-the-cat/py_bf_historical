@@ -35,3 +35,4 @@ You can search for a player (i.e yourself), then it pulls up the match players w
 ### QOL
 - [ ] Redo graphs to d3.js
 - [ ] Create proper db structure
+- [ ] Logo / Favicon
