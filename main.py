@@ -1,6 +1,7 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from fetchStats import fetchStats, fetchMatchStats
 import sqlUtils
+import bleach
 
 app = Flask(__name__)
 
@@ -49,6 +50,25 @@ def players_over_time():
 @app.route("/chart")
 def chartPage():
     return render_template('e.html', raw_data=sqlUtils.graph_data())
+
+@app.route('/api/addplayer', methods=['POST'])
+def track_player():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        sqlUtils.add_player(bleach.clean(username))
+        return "OK", 200
+
+@app.route('/player/<username>')
+def check_if_tracking(username):
+    print(sqlUtils.check_player(username))
+    if sqlUtils.check_player(username):
+        return render_template('player.html', response="stats go here")
+    else:
+        return render_template('player.html', response=f"<i>{username}</i>'s stats are not being tracked")
+
+@app.route('/findplayer')
+def find_player():
+    return render_template('findplayer.html')
 
 @app.errorhandler(404)
 def not_found(e):

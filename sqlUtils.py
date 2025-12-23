@@ -1,4 +1,5 @@
 import sqlite3
+import requests
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -30,7 +31,7 @@ def create_connection(db_file=DB_FILE):
             conn.commit()
         if cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='players';").fetchone() is None:
             print("Table 'players' not found. Creating it...")
-            cur.execute("CREATE TABLE players (id integer PRIMARY KEY, uuid text UNIQUE)")
+            cur.execute("CREATE TABLE players (id integer PRIMARY KEY, uuid text UNIQUE, name text UNIQUE)")
             conn.commit()
     except sqlite3.Error as e:
         print(f"Error creating table: {e}")
@@ -53,13 +54,13 @@ def add_stats(stats):
 
 def add_player(username):
     """ Create a new player entry into the players table """
+    uuid=requests.get("https://api.mojang.com/users/profiles/minecraft/" + username).json()['id']
     conn = create_connection()
     if conn is None: return
-    
-    sql = ''' INSERT INTO players(uuid)
-              VALUES(?) '''
+    sql = ''' INSERT INTO players(uuid, name)
+              VALUES(?, ?) '''
     cur = conn.cursor()
-    cur.execute(sql, (username,))
+    cur.execute(sql, (uuid, username))
     conn.commit()
     last_id = cur.lastrowid
     conn.close()
@@ -73,6 +74,18 @@ def get_players():
     rows = cur.fetchall()
     conn.close()
     return rows
+
+def check_player(name):
+    """ Query all rows in the players table """
+    conn = create_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM players WHERE name=?", (name,))
+    rows = cur.fetchall()
+    conn.close()
+    if len(rows) > 0:
+        return True
+    else:
+        return False
 
 def get_all_stats():
     """ Query all rows in the stats table """

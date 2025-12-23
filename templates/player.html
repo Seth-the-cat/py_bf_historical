@@ -39,11 +39,6 @@
             </script>
         </div>
     </nav>
-    <br>
-    <form method="post" action="{{url_for('track_player')}}" style="text-align: center;">
-        <label for="username">Input a username: </label>
-        <input type="text" name="username" id="username">
-        <input type="submit" value="Submit">
-    </form>
+    <h2 style="text-align: center;">{{response | safe}}</h2>
     </body>
 </html>
