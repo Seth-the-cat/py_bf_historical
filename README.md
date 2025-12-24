@@ -22,6 +22,7 @@ Main goals:
 - [ ] Create table for session stats
 - [ ] Create service to fetch session stats
 - [ ] Make page with session stats
+- [ ] Discord bot that sends session stats
 
 ### Maybe Overlay / match stats grabber
 > [!NOTE]

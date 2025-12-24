@@ -32,6 +32,10 @@ html, body {
     display: inline;
 }
 
+#sideinfo li {
+    margin: 10px;
+}
+
 a {
     color: white;
     text-decoration: none;
@@ -40,6 +44,7 @@ a {
 a h1 {
     box-sizing: border-box;
     margin: 0;
+    padding: 0;
 }
 
 a:hover {

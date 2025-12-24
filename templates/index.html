@@ -14,7 +14,8 @@
             <ul id="topinfo">
                 <li><strong>{{players_online}}</strong> players online</li>
                 <li id="last_update" title="Stats are fetched every 10 minutes"></li>
-                <li>Search player match: <input onkeyup="if(event.key==='Enter'){location.href='/match/'+this.value};" type="text"></input></li>   
+                <li><a href="{{url_for('find_player')}}">Player Stats</a></li>
+                <li><a href="{{url_for('find_match')}}">Match Stats</a></li>   
                 <li><a href="https://github.com/seth-the-cat/py_bf_historical">Github</a></li>
             </ul>
             <script>

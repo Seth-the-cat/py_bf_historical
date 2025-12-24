@@ -14,7 +14,8 @@
             <ul id="topinfo">
                 <li><strong>{{players_online}}</strong> players online</li>
                 <li id="last_update" title="Stats are fetched every 10 minutes"></li>
-                <li>Search player match: <input onkeyup="if(event.key==='Enter'){location.href='/match/'+this.value};" type="text"></input></li>   
+                <li><a href="{{url_for('find_player')}}">Player Stats</a></li>
+                <li><a href="{{url_for('find_match')}}">Match Stats</a></li>   
                 <li><a href="https://github.com/seth-the-cat/py_bf_historical">Github</a></li>
             </ul>
             <script>
@@ -25,8 +26,10 @@
                     const diffMins = Math.floor(diffMs / 60000);
                     const diffSecs = Math.floor((diffMs % 60000) / 1000);
                     let displayText = "Last updated ";
-                    if (diffMins >= 10) {
+                    if (diffMins >= 10 & diffMins < 11) {
                         location.reload();
+                    } if (diffMins > 11) {
+                        displayText += `${diffMins} minutes ago. ⚠️ Stats fetching likely down. Contact seththecat.`;
                     } if (diffMins > 0) {
                         displayText += `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
                     } else {
@@ -39,6 +42,7 @@
             </script>
         </div>
     </nav>
+    <br><br><br>
     <main style="text-align: center;">Input username to view a player's stats over time: <input onkeyup="if(event.key==='Enter'){location.href='/player/'+this.value};" type="text"></input></main>
     </body>
 </html>

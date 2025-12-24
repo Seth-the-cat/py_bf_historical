@@ -31,16 +31,16 @@ def fetchCloudStats():
         data.get("game_player_count").get("ttt"),
         data.get("game_player_count").get("boot"),
     )
-    sqlUtils.add_stats(data_tuple)
-
-def addMuted(json):
-    print(json)
-    if json == {}:
-        return ''
-    else:
-        return ' 🔇'
+    sqlUtils.add_cloud_stats(data_tuple)
 
 def fetchMatchStats(name: str):
+    def addMuted(json):
+        print(json)
+        if json == {}:
+            return ''
+        else:
+            return ' 🔇'
+     
     try:
         data = get_json(f"https://blockfrontapi.vuis.dev/api/v1/player_status?name={name}")
     except:
@@ -72,9 +72,13 @@ def fetchMatchStats(name: str):
 
     return gen_html_from_players(players_in_match), f"{len(players_in_match)} out of {match.get('max_players')} players in match."
 
-def fetchPlayersStats(uuids=sqlUtils.get_players()):
-    resp = requests.post("https://blockfrontapi.vuis.dev/api/v1/player_data/bulk", data=uuids).json()
-    sqlUtils.add_player(resp)
+# def fetchPlayersStats(uuids=sqlUtils.get_players_uuids()):
+#     resp = requests.post("https://blockfrontapi.vuis.dev/api/v1/player_data/bulk", data=uuids).json()
+#     output = {}
+#     for player_stats in resp:
+#         output[
+        
+        
 
 def fetchStats():
     fetchCloudStats()

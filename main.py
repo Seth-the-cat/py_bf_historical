@@ -5,6 +5,8 @@ import bleach
 
 app = Flask(__name__)
 
+nav = open("templates/nav.html", "r").read()
+
 @app.route("/")
 def index():
     try:
@@ -31,6 +33,10 @@ def playerStats(username):
     match_html, players_in_match = fetchMatchStats(username)
     return render_template('match.html', username=username, match_html=match_html, players_in_match=players_in_match)
 
+@app.route("/match")
+def find_match():
+    return render_template('findmatch.html')
+
 @app.route("/addplayer")
 def add_player():
     return render_template('addplayer.html')
@@ -55,7 +61,10 @@ def chartPage():
 def track_player():
     if request.method == 'POST':
         username = request.form.get('username')
-        sqlUtils.add_player(bleach.clean(username))
+        try:
+            sqlUtils.add_player(bleach.clean(username))
+        except ValueError:
+            return "Bad Request" , 400
         return "OK", 200
 
 @app.route('/player/<username>')
