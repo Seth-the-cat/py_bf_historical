@@ -2,9 +2,9 @@ import requests
 from requests import RequestException
 from typing import Any, Dict, Optional
 from datetime import datetime
-from htmlUtils import gen_html_from_players
+from utils.html import gen_html_from_players
 
-import sqlUtils
+import utils.sql as sql
 
 def get_json(url: str, params: Optional[Dict[str, Any]] = None, timeout: float = 5.0) -> Dict[str, Any]:
     """Send a GET request to the given URL and parse the response as JSON."""
@@ -31,7 +31,7 @@ def fetchCloudStats():
         data.get("game_player_count").get("ttt"),
         data.get("game_player_count").get("boot"),
     )
-    sqlUtils.add_cloud_stats(data_tuple)
+    sql.add_cloud_stats(data_tuple)
 
 def fetchMatchStats(name: str):
     def addMuted(json):

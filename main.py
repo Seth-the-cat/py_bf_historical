@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request
 from fetchStats import fetchStats, fetchMatchStats
-import sqlUtils
+import utils.sql as sql
 import bleach
 
 app = Flask(__name__)
@@ -10,16 +10,16 @@ nav = open("templates/nav.html", "r").read()
 @app.route("/")
 def index():
     try:
-        latest_stats = sqlUtils.get_latest_stats()
+        latest_stats = sql.get_latest_stats()
         players_online = latest_stats[2]
         last_updated = latest_stats[1]
-        raw_data = sqlUtils.graph_data()
+        raw_data = sql.graph_data()
     except TypeError:
         fetchStats()
-        latest_stats = sqlUtils.get_latest_stats()
+        latest_stats = sql.get_latest_stats()
         players_online = latest_stats[2]
         last_updated = latest_stats[1]
-        raw_data = sqlUtils.graph_data()
+        raw_data = sql.graph_data()
     except Exception as e:
         return f"<p>Error retrieving stats: {e}</p>"
     return render_template('index.html',
@@ -45,32 +45,32 @@ def add_player():
 @app.route("/stats_test")
 def stats_test():
     fetchStats()
-    return f'<p>Latest stats: {sqlUtils.get_latest_stats()[2]}</p>'
+    return f'<p>Latest stats: {sql.get_latest_stats()[2]}</p>'
 
 # Show players over time data
 @app.route("/playersOverTime")
 def players_over_time():
-    return sqlUtils.two_cols_of_stats()
+    return sql.two_cols_of_stats()
 
 # Show chart page for testing. Maybe redo graph with d3.js later
 @app.route("/chart")
 def chartPage():
-    return render_template('e.html', raw_data=sqlUtils.graph_data())
+    return render_template('e.html', raw_data=sql.graph_data())
 
 @app.route('/api/addplayer', methods=['POST'])
 def track_player():
     if request.method == 'POST':
         username = request.form.get('username')
         try:
-            sqlUtils.add_player(bleach.clean(username))
+            sql.add_player(bleach.clean(username))
         except ValueError:
             return "Bad Request" , 400
         return "OK", 200
 
 @app.route('/player/<username>')
 def check_if_tracking(username):
-    print(sqlUtils.check_player(username))
-    if sqlUtils.check_player(username):
+    print(sql.check_player(username))
+    if sql.check_player(username):
         return render_template('player.html', response="stats go here")
     else:
         return render_template('player.html', response=f"<i>{username}</i>'s stats are not being tracked")

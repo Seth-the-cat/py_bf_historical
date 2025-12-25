@@ -10,6 +10,7 @@ sched.add_job(fetchStats, 'interval', minutes=10)
 print("Worker started. Running initial fetch...")
 try:
     fetchStats() # Run once on startup
+    print("Done!!")
 except Exception as e:
     print(f"Error in initial fetch: {e}")
 
