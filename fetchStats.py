@@ -71,13 +71,32 @@ def fetchMatchStats(name: str):
 
     return gen_html_from_players(players_in_match), f"{len(players_in_match)} out of {match.get('max_players')} players in match."
 
-# def fetchPlayersStats(uuids=sqlUtils.get_players_uuids()):
-#     resp = requests.post("https://blockfrontapi.vuis.dev/api/v1/player_data/bulk", data=uuids).json()
-#     output = {}
-#     for player_stats in resp:
-#         output[
+def fetchPlayersStats():
+    print("test")
+    uuids = ", ".join([tup[0] for tup in sql.get_players_uuids()])
+    resp = requests.post("https://blockfrontapi.vuis.dev/api/v1/player_data/bulk", data=uuids).json()
+    output = {}
+    DIRECT_FEILD = ['kills', 'deaths', 'assists', 'infected_kills', 'vehicle_kills','bot_kills', 'infected_rounds_won', 'infected_matches_won','highest_kill_streak', 'highest_death_streak', 'exp', 'prestige', 'total_games', 'time_played']
+    MAPPING = {'back_stabs': 'backstabs', 'head_shots': 'headshots', 'trophies': 'match_wins'}
+    CLASS_ID_MAP = {0: 'rifle_xp', 1: 'lt_rifle_xp', 2: 'assault_xp', 3: 'support_xp', 4: 'medic_xp', 5: 'sinper_xp', 6: 'gunner_xp', 7: 'anti_tank_xp', 9: 'commander_xp'}
+    for player_data in resp:
+        for field in DIRECT_FEILD:
+            if field in player_data:
+                output[field] = player_data[field]
+        for key, mapped_key in MAPPING.items():
+            if key in player_data:
+                print(key, player_data[key])
+                output[mapped_key] = player_data[key]
+        for class_xp in player_data.get('class_xp', []):
+            class_id = class_xp.get('class_id')
+            if class_id in CLASS_ID_MAP:
+                output[CLASS_ID_MAP[class_id]] = class_xp.get('xp')
+        sql.add_player_stats(sql.get_player_stats(player_data['uuid']), player_data)
         
-        
+
+    print(output)
 
 def fetchStats():
     fetchCloudStats()
+
+# fetchPlayersStats()

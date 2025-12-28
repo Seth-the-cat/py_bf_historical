@@ -64,7 +64,7 @@ def create_connection(db_file=DB_FILE):
                                     prestige INTEGER ,
                                     rifle_xp INTEGER ,
                                     lt_rifle_xp INTEGER ,
-                                    assult_xp INTEGER ,
+                                    assault_xp INTEGER ,
                                     support_xp INTEGER ,
                                     medic_xp INTEGER ,
                                     sinper_xp INTEGER ,
@@ -129,9 +129,9 @@ def add_player(username):
 def add_player_stats(player_id, stats):
     """ Create a new stats entry into the stats table """
     with get_cursor() as cur:
-        sql = ''' INSERT INTO player_stats(player_id, kills, assists, deaths, hskr, headshots, backstabs, no_scopes, first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, exp, prestige, rifle_xp, lt_rifle_xp, assult_xp, support_xp, medic_xp, sinper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, match_wins, time_played)
+        sql = ''' INSERT INTO player_stats(player_id, kills, assists, deaths, headshots, backstabs, no_scopes, first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, sinper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, match_wins, time_played)
                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) '''
-        cur.execute(sql, (player_id, stats['kills'], stats['assists'], stats['deaths'], stats['hskr'], stats['headshots'], stats['backstabs'], stats['no_scopes'], stats['first_bloods'], stats['fire_kills'], stats['bot_kills'], stats['infected_kills'], stats['infected_rounds_won'], stats['infected_matches_won'], stats['vehicle_kills'], stats['highest_kill_streak'], stats['highest_death_streak'], stats['exp'], stats['prestige'], stats['rifle_xp'], stats['lt_rifle_xp'], stats['assult_xp'], stats['support_xp'], stats['medic_xp'], stats['sinper_xp'], stats['gunner_xp'], stats['anti_tank_xp'], stats['commander_xp'], stats['match_karma'], stats['total_games'], stats['match_wins'], stats['time_played']))
+        cur.execute(sql, (player_id, stats['kills'], stats['assists'], stats['deaths'], stats['headshots'], stats['backstabs'], stats['no_scopes'], stats['first_bloods'], stats['fire_kills'], stats['bot_kills'], stats['infected_kills'], stats['infected_rounds_won'], stats['infected_matches_won'], stats['vehicle_kills'], stats['highest_kill_streak'], stats['highest_death_streak'], stats['exp'], stats['prestige'], stats['rifle_xp'], stats['lt_rifle_xp'], stats['assult_xp'], stats['support_xp'], stats['medic_xp'], stats['sinper_xp'], stats['gunner_xp'], stats['anti_tank_xp'], stats['commander_xp'], stats['match_karma'], stats['total_games'], stats['match_wins'], stats['time_played']))
 
 def get_players_uuids():
     """ Query all rows in the players table """
