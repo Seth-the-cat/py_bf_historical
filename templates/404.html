@@ -9,6 +9,7 @@
 <body>
     <main style="text-align: center;">
         <h1>404 Page not found</h1>
+        <img src="{{url_for('static', filename='assets/404.gif')}}">
         <p>If you think this is a mistake, please contact @seththecat on Discord.</p>
         <h3><a href="{{url_for('index')}}">Home page</a></h3>
         Search player match: <input onkeyup="if(event.key==='Enter'){location.href='/match/'+this.value};" type="text"></input>

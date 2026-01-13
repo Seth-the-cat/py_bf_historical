@@ -67,7 +67,7 @@ def create_connection(db_file=DB_FILE):
                                     assault_xp INTEGER ,
                                     support_xp INTEGER ,
                                     medic_xp INTEGER ,
-                                    sinper_xp INTEGER ,
+                                    sniper_xp INTEGER ,
                                     gunner_xp INTEGER ,
                                     anti_tank_xp INTEGER ,
                                     commander_xp INTEGER , 
@@ -128,10 +128,49 @@ def add_player(username):
 
 def add_player_stats(player_id, stats):
     """ Create a new stats entry into the stats table """
+    if not player_id:
+        raise ValueError(f"Invalid player_id: {player_id}")
+
+    # Use safe lookups with defaults to avoid KeyError if fields are missing
+    kills = stats.get('kills', 0)
+    assists = stats.get('assists', 0)
+    deaths = stats.get('deaths', 0)
+    headshots = stats.get('headshots', 0)
+    backstabs = stats.get('backstabs', 0)
+    no_scopes = stats.get('no_scopes', 0)
+    first_bloods = stats.get('first_bloods', 0)
+    fire_kills = stats.get('fire_kills', 0)
+    bot_kills = stats.get('bot_kills', 0)
+    infected_kills = stats.get('infected_kills', 0)
+    infected_rounds_won = stats.get('infected_rounds_won', 0)
+    infected_matches_won = stats.get('infected_matches_won', 0)
+    vehicle_kills = stats.get('vehicle_kills', 0)
+    highest_kill_streak = stats.get('highest_kill_streak', 0)
+    highest_death_streak = stats.get('highest_death_streak', 0)
+    exp = stats.get('exp', 0)
+    prestige = stats.get('prestige', 0)
+    rifle_xp = stats.get('rifle_xp', 0)
+    lt_rifle_xp = stats.get('lt_rifle_xp', 0)
+    assault_xp = stats.get('assault_xp', 0)  # fixed typo (was assult_xp)
+    support_xp = stats.get('support_xp', 0)
+    medic_xp = stats.get('medic_xp', 0)
+    sniper_xp = stats.get('sniper_xp', 0)    # fixed typo (was sinper_xp)
+    gunner_xp = stats.get('gunner_xp', 0)
+    anti_tank_xp = stats.get('anti_tank_xp', 0)
+    commander_xp = stats.get('commander_xp', 0)
+    match_karma = stats.get('match_karma', 0)
+    total_games = stats.get('total_games', 0)
+    match_wins = stats.get('match_wins', 0)
+    time_played = stats.get('time_played', 0)
+
+    print(len([player_id, kills, assists, deaths, headshots, backstabs, no_scopes, first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, sniper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, match_wins, time_played]))
+
     with get_cursor() as cur:
-        sql = ''' INSERT INTO player_stats(player_id, kills, assists, deaths, headshots, backstabs, no_scopes, first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, sinper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, match_wins, time_played)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) '''
-        cur.execute(sql, (player_id, stats['kills'], stats['assists'], stats['deaths'], stats['headshots'], stats['backstabs'], stats['no_scopes'], stats['first_bloods'], stats['fire_kills'], stats['bot_kills'], stats['infected_kills'], stats['infected_rounds_won'], stats['infected_matches_won'], stats['vehicle_kills'], stats['highest_kill_streak'], stats['highest_death_streak'], stats['exp'], stats['prestige'], stats['rifle_xp'], stats['lt_rifle_xp'], stats['assult_xp'], stats['support_xp'], stats['medic_xp'], stats['sinper_xp'], stats['gunner_xp'], stats['anti_tank_xp'], stats['commander_xp'], stats['match_karma'], stats['total_games'], stats['match_wins'], stats['time_played']))
+        sql = ''' INSERT INTO player_stats(player_id, kills, assists, deaths, headshots, backstabs, no_scopes, first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, sniper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, match_wins, time_played)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) '''
+        cur.execute(sql, (player_id, kills, assists, deaths, headshots, backstabs, no_scopes, first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, sniper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, match_wins, time_played))
+        last_id = cur.lastrowid
+        return last_id
 
 def get_players_uuids():
     """ Query all rows in the players table """
@@ -140,11 +179,26 @@ def get_players_uuids():
         rows = cur.fetchall()
         return rows
 
-def get_player_stats(uuid):
+def get_player_id_by_uuid(uuid):
+    """Return the `id` of a player given their UUID, or None if not found."""
+    with get_cursor() as cur:
+        cur.execute("SELECT id FROM players WHERE uuid = ?", (uuid,))
+        row = cur.fetchone()
+        return row[0] if row else None
+    
+def get_player_id_by_name(name):
+    """Return the `id` of a player given their name, or None if not found."""
+    with get_cursor() as cur:
+        cur.execute("SELECT id FROM players WHERE name COLLATE NOCASE = ?", (name,))
+        row = cur.fetchone()
+        return row[0] if row else None
+
+def get_player_stats(player_id):
     """ Query all rows in the stats table """
     with get_cursor() as cur:
-        cur.execute("SELECT * FROM player_stats WHERE player_id=?", (uuid,))
+        cur.execute("SELECT * FROM player_stats WHERE player_id=?", (player_id,))
         rows = cur.fetchall()
+        print(rows)
         return rows
 
 def check_player(name):

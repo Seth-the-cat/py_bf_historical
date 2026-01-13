@@ -72,31 +72,40 @@ def fetchMatchStats(name: str):
     return gen_html_from_players(players_in_match), f"{len(players_in_match)} out of {match.get('max_players')} players in match."
 
 def fetchPlayersStats():
-    print("test")
+    print("test\n-------------")
     uuids = ", ".join([tup[0] for tup in sql.get_players_uuids()])
     resp = requests.post("https://blockfrontapi.vuis.dev/api/v1/player_data/bulk", data=uuids).json()
+    print(str(resp)+"\n-------------")
     output = {}
-    DIRECT_FEILD = ['kills', 'deaths', 'assists', 'infected_kills', 'vehicle_kills','bot_kills', 'infected_rounds_won', 'infected_matches_won','highest_kill_streak', 'highest_death_streak', 'exp', 'prestige', 'total_games', 'time_played']
+    DIRECT_FEILD = [
+    'kills', 'deaths', 'assists', 'infected_kills', 'vehicle_kills', 'bot_kills', 'infected_rounds_won', 'infected_matches_won', 'highest_kill_streak', 'highest_death_streak', 'exp', 'prestige', 'total_games', 'time_played', 'no_scopes', 'first_bloods', 'fire_kills', 'match_karma']
     MAPPING = {'back_stabs': 'backstabs', 'head_shots': 'headshots', 'trophies': 'match_wins'}
-    CLASS_ID_MAP = {0: 'rifle_xp', 1: 'lt_rifle_xp', 2: 'assault_xp', 3: 'support_xp', 4: 'medic_xp', 5: 'sinper_xp', 6: 'gunner_xp', 7: 'anti_tank_xp', 9: 'commander_xp'}
+    CLASS_ID_MAP = {0: 'rifle_xp', 1: 'lt_rifle_xp', 2: 'assault_xp', 3: 'support_xp', 4: 'medic_xp', 5: 'sniper_xp', 6: 'gunner_xp', 7: 'anti_tank_xp', 9: 'commander_xp'}
     for player_data in resp:
+        print(f"({player_data, type(player_data)}\n\n-------------")
+        output = {}
         for field in DIRECT_FEILD:
             if field in player_data:
                 output[field] = player_data[field]
         for key, mapped_key in MAPPING.items():
             if key in player_data:
-                print(key, player_data[key])
+                print(f"{key, player_data[key]}\n\n-------------")
                 output[mapped_key] = player_data[key]
-        for class_xp in player_data.get('class_xp', []):
-            class_id = class_xp.get('class_id')
-            if class_id in CLASS_ID_MAP:
-                output[CLASS_ID_MAP[class_id]] = class_xp.get('xp')
-        sql.add_player_stats(sql.get_player_stats(player_data['uuid']), player_data)
-        
+        for entry in player_data.get('class_exp', []):
+                c_id = entry.get('id')
+                if c_id in CLASS_ID_MAP:
+                    output[CLASS_ID_MAP[c_id]] = entry.get('exp', 0)
+        # find player's DB id by UUID, skip if not present
+        print(f"{output}\n\n")
+        player_db_id = sql.get_player_id_by_name(player_data['username'])
+        print(f"{player_db_id}{player_data['uuid']}\n\n-------------")
+        if not player_db_id:
+            print(f"Skipping player {player_data.get('username')} ({player_data.get('uuid')}): not found in DB")
+            continue
+        sql.add_player_stats(player_db_id, output)
 
-    print(output)
 
 def fetchStats():
     fetchCloudStats()
 
-# fetchPlayersStats()
+fetchPlayersStats()

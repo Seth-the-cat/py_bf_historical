@@ -5,7 +5,6 @@ import bleach
 
 app = Flask(__name__)
 
-nav = open("templates/nav.html", "r").read()
 
 @app.route("/")
 def index():
@@ -71,7 +70,9 @@ def track_player():
 def check_if_tracking(username):
     print(sql.check_player(username))
     if sql.check_player(username):
-        return render_template('player.html', response="stats go here")
+        print("Player_id: ",test:=sql.get_player_id_by_name(username))
+        print(sql.get_player_stats(test))
+        return render_template('player.html', response=sql.get_player_stats(1))
     else:
         return render_template('player.html', response=f"<i>{username}</i>'s stats are not being tracked")
 
