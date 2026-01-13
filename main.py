@@ -1,10 +1,10 @@
+import logging
 from flask import Flask, render_template, request
 from fetchStats import fetchStats, fetchMatchStats
 import utils.sql as sql
 import bleach
 
 app = Flask(__name__)
-
 
 @app.route("/")
 def index():
@@ -58,6 +58,7 @@ def chartPage():
 
 @app.route('/api/addplayer', methods=['POST'])
 def track_player():
+    app.logger.info("Trying to add new player")
     if request.method == 'POST':
         username = request.form.get('username')
         try:
@@ -68,10 +69,10 @@ def track_player():
 
 @app.route('/player/<username>')
 def check_if_tracking(username):
-    print(sql.check_player(username))
+    app.logger.debug(sql.check_player(username))
     if sql.check_player(username):
-        print("Player_id: ",test:=sql.get_player_id_by_name(username))
-        print(sql.get_player_stats(test))
+        app.logger.info("Player_id: ",test:=sql.get_player_id_by_name(username))
+        app.logger.debug(sql.get_player_stats(test))
         return render_template('player.html', response=sql.get_player_stats(1))
     else:
         return render_template('player.html', response=f"<i>{username}</i>'s stats are not being tracked")
@@ -87,3 +88,4 @@ def not_found(e):
 if __name__ == '__main__':
     # You can keep this specifically for local testing if you want
     app.run(debug=True, use_reloader=True)
+    logging.basicConfig(level=logging.DEBUG)
