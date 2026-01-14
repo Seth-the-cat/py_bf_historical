@@ -1,6 +1,10 @@
+import logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 from apscheduler.schedulers.blocking import BlockingScheduler
 from fetchStats import fetchStats
-
 # Use BlockingScheduler so the script stays alive
 sched = BlockingScheduler()
 
