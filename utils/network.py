@@ -4,7 +4,7 @@ import aiohttp
 import logging
 logger = logging.getLogger(__name__)
 BASE_BLOCKFRONT_URL = "https://blockfrontapi.vuis.dev"
-
+#TODO possibly re-use Clients
 async def async_post_request(endpoint:str,data: Optional[Dict[str, Any]] = None,baseurl=BASE_BLOCKFRONT_URL,timeout: float = 15.0)->Union[Dict, List, str]:
     async with aiohttp.ClientSession() as client:
         url = f"{baseurl}/{endpoint}"

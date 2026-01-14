@@ -67,7 +67,7 @@ def fetchPlayersStats():
     if not sql_result:
         logger.info("No players Found in database skipping")
         return
-    uuids = ", ".join([tup[0] for tup in sql.get_players_uuids()])
+    uuids = ", ".join([tup[0] for tup in sql_result])
     logger.info(f"Making request to api for {uuids}")
     try:
         response = network.post_request("/api/v1/player_data/bulk",data=uuids)
