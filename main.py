@@ -71,7 +71,8 @@ def track_player():
 def check_if_tracking(username):
     app.logger.debug(sql.check_player(username))
     if sql.check_player(username):
-        app.logger.info("Player_id: ",test:=sql.get_player_id_by_name(username))
+        test = sql.get_player_id_by_name(username)
+        app.logger.info(f"Player_id: {test}")
         app.logger.debug(sql.get_player_stats(test))
         return render_template('player.html', response=sql.get_player_stats(1))
     else:
