@@ -1,4 +1,5 @@
 import asyncio
+import json
 from typing import Any, Dict, List, Optional, Union
 import aiohttp
 import logging
@@ -7,21 +8,16 @@ BASE_BLOCKFRONT_URL = "https://blockfrontapi.vuis.dev"
 #TODO possibly re-use Clients
 async def async_post_request(endpoint:str,data: Optional[Dict[str, Any]] = None,baseurl=BASE_BLOCKFRONT_URL,timeout: float = 15.0)->Union[Dict, List, str]:
     async with aiohttp.ClientSession() as client:
-        url = f"{baseurl}/{endpoint}"
+        url = f"{baseurl}{endpoint}"
+        logger.info(data)
         try:
-            async with client.post(url, json=data,timeout=timeout) as response:
+            async with client.post(url, json=json.dumps(data),timeout=timeout) as response:
                 if response.ok:
                     return await response.json()
                 else:
-                    error_text = response.text
+                    error_text = await response.text()
                     logger.error(f"Request to {url} failed: {error_text}")
                     raise Exception(f"Request to {url} failed: {error_text}")
-        except aiohttp.RequestError as e:
-            logger.error(f"Request to {url} failed: {e}")
-            raise
-        except aiohttp.TimeoutException as e:
-            logger.error(f"Request to {url} timed out: {e}")
-            raise
         except Exception as e:
             logger.error(f"Request to {url} failed unexpectedly: {e}")
             raise
@@ -39,17 +35,10 @@ async def async_get_request(endpoint:str,params: Optional[Dict[str, Any]] = None
                 if response.ok:
                     return await response.json()
                 else:
-                    error_text = response.text
+                    error_text =  response.text
                     logger.error(f"Request to {url} failed: {error_text}")
                     raise Exception(f"Request to {url} failed: {error_text}")
 
-                
-        except aiohttp.RequestError as e:
-            logger.error(f"Request to {url} failed: {e}")
-            raise
-        except aiohttp.TimeoutException as e:
-            logger.error(f"Request to {url} timed out: {e}")
-            raise Exception(f"Request to {url} timed out: {e}")
         except Exception as e:
             logger.error(f"Request to {url} failed unexpectedly: {e}")
             raise

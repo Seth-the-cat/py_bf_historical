@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def fetchCloudStats():
-    data = network.get_request("api/v1/cloud_data")
+    data = network.get_request("/api/v1/cloud_data")
     logger.info("\nFetch Process: Fetched cloud stats")
     logger.info("\nFetch Process: Storing stats in database...")
     data_tuple = (
@@ -67,12 +67,12 @@ def fetchPlayersStats():
     if not sql_result:
         logger.info("No players Found in database skipping")
         return
-    uuids = ", ".join([tup[0] for tup in sql_result])
+    uuids = [tup[0] for tup in sql_result]
     logger.info(f"Making request to api for {uuids}")
     try:
         response = network.post_request("/api/v1/player_data/bulk",data=uuids)
-    except:
-        logger.error(f"ERROR CODE: {response}")
+    except Exception as e:
+        logger.error(f"ERROR making API request: {e}")
         return
 
     api_data = response.json()

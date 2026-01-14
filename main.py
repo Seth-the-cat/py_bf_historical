@@ -88,5 +88,8 @@ def not_found(e):
 
 if __name__ == '__main__':
     # You can keep this specifically for local testing if you want
-    app.run(debug=True, use_reloader=True)
+    app.logger.setLevel(logging.DEBUG)
+    
+    # Configure root logger for your modules
     logging.basicConfig(level=logging.DEBUG)
+    app.run(debug=True, use_reloader=True)

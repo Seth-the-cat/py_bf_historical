@@ -117,7 +117,7 @@ def add_player(username):
     """ Create a new player entry into the players table """
     try:
         result = network.get_request("/api/v1/player_data",params={"name": username})
-    except:
+    except Exception as e:
         raise ValueError(f"Invalid username: '{username}'")
     uuid = result["uuid"]
     with get_cursor() as cur:
