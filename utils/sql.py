@@ -3,7 +3,7 @@ from pathlib import Path
 import sqlite3
 import requests
 import os
-
+import json
 
 DATA_DIR = Path("./data")
 # Ensure the 'data' directory exists before we try to connect
@@ -296,6 +296,28 @@ def graph_data():
     formatted_entries = []
     for date_str, players_online, players_in_dom, players_in_tdm, players_in_inf, players_in_gg, players_in_ttt, players_in_boot in rows:
         formatted_entries.append(f'  {{Date: new Date("{date_str}"), Players: {players_online}, Dom: {players_in_dom}, TDM: {players_in_tdm}, Inf: {players_in_inf}, GG: {players_in_gg}, TTT: {players_in_ttt}, Boot: {players_in_boot}}}')
+
+    output = "[\n" + ",\n".join(formatted_entries) + "\n]" 
+    return output
+
+def player_graph_data(player_id):   
+    """ Query date and select columns from player_stats table for graphing """
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT date, kills, deaths, assists, headshots, match_wins, total_games 
+            FROM player_stats 
+            WHERE player_id = ? 
+            ORDER BY date ASC
+        """, (player_id,))
+        rows = cur.fetchall()
+        
+    formatted_entries = []
+    for row in rows:
+        date_str, kills, deaths, assists, headshots, match_wins, total_games = row
+        formatted_entries.append(
+            f'  {{Date: "{date_str}", Kills: {kills}, Deaths: {deaths}, '
+            f'Assists: {assists}, Headshots: {headshots}, Wins: {match_wins}, Games: {total_games}}}'
+        )
 
     output = "[\n" + ",\n".join(formatted_entries) + "\n]" 
     return output

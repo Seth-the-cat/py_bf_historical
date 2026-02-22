@@ -75,8 +75,8 @@ def check_if_tracking(username):
     print(sql.check_player(username))
     if sql.check_player(username):
         print("Player_id: ",test:=sql.get_player_id_by_name(username))
-        print(sql.get_player_stats(test))
-        return render_template('player.html', response=utils.html.gen_html_table_from_player_stats(sql.get_player_stats(test)))
+        print(sql.player_graph_data(test))
+        return render_template('player.html', response=utils.html.gen_html_table_from_player_stats(sql.get_player_stats(test)), raw_data=sql.player_graph_data(test))
     else:
         return render_template('player.html', response=f"<i>{username}</i>'s stats are not being tracked. <br> <a href='/addplayer'>Click here to add them.</a>")
 
