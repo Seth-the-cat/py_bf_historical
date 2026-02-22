@@ -49,8 +49,36 @@
             <input onkeyup="if(event.key==='Enter'){location.href='/player/'+this.value};" type="text">
         </div>
     
-        <div style="width: 100%; padding: 0.3em;">   
-            {{response|safe}}
+        <style>
+            .player-grid {
+                display: grid;
+                /* This automatically creates columns that are at least 180px wide */
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                gap: 15px;
+                padding: 20px;
+            }
+            .player-card {
+                background: #000000;
+                padding: 10px;
+                border-radius: 5px;
+                text-align: center;
+                border: 1px solid #ffffff;
+                transition: background-color 0.3s ease;
+            }
+            .player-card:hover {
+                background-color: #ffffff;
+                color: #000000;
+            }
+            .player-card a {
+                color: #efefef;
+                text-decoration: none;
+            }
+        </style>
+
+        <div class="player-grid">
+            {% for player in players %}
+                <button class="player-card" onclick="location.href='/player/{{ player.name }}'">{{player.name}}</button>
+            {% endfor %}
         </div>
     </main>
     </body>

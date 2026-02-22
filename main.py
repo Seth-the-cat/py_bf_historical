@@ -80,7 +80,7 @@ def check_if_tracking(username):
 @app.route('/findplayer')
 def find_player():
     # print(sql.get_players_names())
-    return render_template('findplayer.html', response=utils.html.gen_html_table_of_players(sql.get_players_names()))
+    return render_template('findplayer.html', players=sql.get_players_names())
 
 @app.errorhandler(404)
 def not_found(e):
