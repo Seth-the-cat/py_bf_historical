@@ -52,10 +52,13 @@
         <style>
             .player-grid {
                 display: grid;
-                /* This automatically creates columns that are at least 180px wide */
+                /* This creates the tiles! */
                 grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
                 gap: 15px;
                 padding: 20px;
+                /* ADD THESE TWO LINES */
+                width: 100%; 
+                max-width: 1200px; 
             }
             .player-card {
                 background: #000000;
@@ -64,14 +67,13 @@
                 text-align: center;
                 border: 1px solid #ffffff;
                 transition: background-color 0.3s ease;
+                color: #efefef;
+                text-decoration: none;
             }
             .player-card:hover {
                 background-color: #ffffff;
-                color: #000000;
-            }
-            .player-card a {
-                color: #efefef;
-                text-decoration: none;
+                color: #000000; /* Forces text to black when background turns white */
+                cursor: pointer;
             }
         </style>
 
