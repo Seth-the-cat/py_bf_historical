@@ -7,6 +7,7 @@
     <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/master.css')}}"/>
 </head>
 <body>
+    {% include 'nav.html' %}
     <main style="text-align: center;">
         <h1>404 Page not found</h1>
         <img src="{{url_for('static', filename='assets/404.gif')}}">

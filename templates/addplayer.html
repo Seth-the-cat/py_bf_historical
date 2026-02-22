@@ -8,40 +8,7 @@
     <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/index.css')}}"/>
 </head>
 <body>
-    <nav>
-        <div id="menu">
-            <h1><a href="{{url_for('index')}}">Blockfront historical</a></h1>
-            <ul id="topinfo">
-                <li><strong>{{players_online}}</strong> players online</li>
-                <li id="last_update" title="Stats are fetched every 10 minutes"></li>
-                <li><a href="{{url_for('find_player')}}">Player Stats</a></li>
-                <li><a href="{{url_for('find_match')}}">Match Stats</a></li>   
-                <li><a href="https://github.com/seth-the-cat/py_bf_historical">Github</a></li>
-            </ul>
-            <script>
-                const lastUpdated = new Date("{{last_updated}}");
-                function updateLastUpdated() {
-                    const now = new Date();
-                    const diffMs = now - lastUpdated;
-                    const diffMins = Math.floor(diffMs / 60000);
-                    const diffSecs = Math.floor((diffMs % 60000) / 1000);
-                    let displayText = "Last updated ";
-                    if (diffMins >= 10 & diffMins < 11) {
-                        location.reload();
-                    } if (diffMins > 11) {
-                        displayText += `${diffMins} minutes ago. ⚠️ Stats fetching likely down. Contact seththecat.`;
-                    } if (diffMins > 0) {
-                        displayText += `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
-                    } else {
-                        displayText += `${diffSecs} second${diffSecs !== 1 ? 's' : ''} ago`;
-                    }
-                    document.getElementById("last_update").innerText = displayText;
-                }
-                setInterval(updateLastUpdated, 1000);
-                updateLastUpdated();
-            </script>
-        </div>
-    </nav>
+    {% include 'nav.html' %}
     <br>
     <form method="post" action="{{url_for('track_player')}}" style="text-align: center;">
         <label for="username">Input a username: </label>

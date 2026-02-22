@@ -7,24 +7,27 @@ import bleach
 app = Flask(__name__)
 
 
-@app.route("/")
-def index():
+@app.context_processor
+def inject_global_stats():
     try:
         latest_stats = sql.get_latest_stats()
         players_online = latest_stats[2]
         last_updated = latest_stats[1]
+    except Exception as e:
+        players_online = "N/A"
+        last_updated = "N/A"
+    return dict(players_online=players_online, last_updated=last_updated)
+
+@app.route("/")
+def index():
+    try:
         raw_data = sql.graph_data()
     except TypeError:
         fetchStats()
-        latest_stats = sql.get_latest_stats()
-        players_online = latest_stats[2]
-        last_updated = latest_stats[1]
         raw_data = sql.graph_data()
     except Exception as e:
         return f"<p>Error retrieving stats: {e}</p>"
     return render_template('index.html',
-    players_online=players_online,
-    last_updated=last_updated,
     raw_data=raw_data
     )
 
