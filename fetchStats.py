@@ -91,33 +91,47 @@ def fetchPlayersStats():
     if not uuids_list:
         return
 
-    uuids_str = ",".join(uuids_list)
-    
-    # Ensure we get a valid JSON response
-    response = requests.post(f"{API_BASE_URL}/api/v1/player_data/bulk", data=uuids_str)
-    try:
-        resp = response.json()
-    except ValueError:
-        print("API did not return valid JSON")
-        return
+    # 1. Safely add dashes back to the UUIDs
+    formatted_uuids = []
+    for u in uuids_list:
+        clean_u = u.strip()
+        if len(clean_u) == 32:
+            formatted_uuids.append(f"{clean_u[:8]}-{clean_u[8:12]}-{clean_u[12:16]}-{clean_u[16:20]}-{clean_u[20:]}")
+        else:
+            formatted_uuids.append(clean_u)
 
-    # If the API returns a single dict instead of a list, wrap it in a list
-    if isinstance(resp, dict):
-        resp = [resp]
+    # 2. Setup our batches
+    chunk_size = 50
+    all_player_data = []
     
-    # If resp is a string here, it means the API returned something like '"Internal Server Error"'
-    if not isinstance(resp, list):
-        print(f"Expected list of players, but got {type(resp)}")
-        return
+    print(f"🕵️  Sending {len(formatted_uuids)} UUIDs to API in batches of {chunk_size}...")
 
+    # 3. Loop through the list 50 at a time
+    for i in range(0, len(formatted_uuids), chunk_size):
+        chunk = formatted_uuids[i:i + chunk_size]
+        uuids_str = ",".join(chunk)
+        
+        try:
+            response = requests.post(f"{API_BASE_URL}/api/v1/player_data/bulk", data=uuids_str)
+            resp = response.json()
+            
+            if isinstance(resp, dict):
+                resp = [resp]
+            if isinstance(resp, list):
+                all_player_data.extend(resp)
+        except Exception as e:
+            print(f"⚠️ Failed to fetch a batch: {e}")
+            continue
+
+    print(f"✅ API successfully returned data for {len(all_player_data)} players total!")
+
+    # 4. Process all the data!
     DIRECT_FEILD = ['kills', 'deaths', 'assists', 'infected_kills', 'vehicle_kills', 'bot_kills', 'infected_rounds_won', 'infected_matches_won', 'highest_kill_streak', 'highest_death_streak', 'exp', 'prestige', 'total_games', 'time_played', 'no_scopes', 'first_bloods', 'fire_kills', 'match_karma']
     MAPPING = {'back_stabs': 'backstabs', 'head_shots': 'headshots', 'trophies': 'match_wins'}
     CLASS_ID_MAP = {0: 'rifle_xp', 1: 'lt_rifle_xp', 2: 'assault_xp', 3: 'support_xp', 4: 'medic_xp', 5: 'sniper_xp', 6: 'gunner_xp', 7: 'anti_tank_xp', 9: 'commander_xp'}
 
-    for player_data in resp:
-        # SAFETY CHECK: If player_data is a string, skip it to avoid the AttributeError
+    for player_data in all_player_data:
         if not isinstance(player_data, dict):
-            print(f"Skipping invalid player entry: {player_data}")
             continue
 
         output = {}
@@ -129,7 +143,6 @@ def fetchPlayersStats():
             if key in player_data:
                 output[mapped_key] = player_data[key]
         
-        # Now this is safe from 'str' object errors
         class_exp = player_data.get('class_exp', [])
         if isinstance(class_exp, list):
             for entry in class_exp:
@@ -138,10 +151,13 @@ def fetchPlayersStats():
                     if c_id in CLASS_ID_MAP:
                         output[CLASS_ID_MAP[c_id]] = entry.get('exp', 0)
 
-        player_uuid = player_data.get('uuid')
+        player_uuid = player_data.get('uuid') # Keep the dashes!
         player_name = player_data.get('username')
+
+        # 6. Save the name and stats
         if player_uuid and player_name:
             sql.update_player_name(player_uuid, player_name)
+            
         player_db_id = sql.get_player_id_by_name(player_name)
         if player_db_id:
             sql.add_player_stats(player_db_id, output)
@@ -149,3 +165,6 @@ def fetchPlayersStats():
 def fetchStats():
     fetchCloudStats()
     fetchPlayersStats()
+
+if __name__ == "__main__":
+    fetchStats()

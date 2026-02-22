@@ -307,18 +307,21 @@ def clear_cloud_stats():
         cur.execute("DELETE FROM cloud_stats")
 
 def update_player_name(player_uuid, player_name):
-    """Updates the player's name in the database if it is missing or has changed."""
+    """Updates the player's name using the exact 36-char dashed UUID."""
     if not player_uuid or not player_name:
         return
 
+    # Keep the UUID exactly as provided (dashed, 36 chars)
+    clean_uuid = str(player_uuid).strip().lower()
+    clean_name = str(player_name).strip()
+
     with get_cursor() as cur:
-        # Update the name for the specific UUID
         cur.execute('''
             UPDATE players 
             SET name = ? 
-            WHERE uuid = ?
-        ''', (player_name, player_uuid))
-
+            WHERE LOWER(uuid) = ?
+        ''', (clean_name, clean_uuid))
+        cur.connection.commit() # Ensure the change is saved!
 # Runable functions for testing/debugging
 if __name__ == '__main__':
     print(f"Database Path: {DB_FILE}")
