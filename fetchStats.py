@@ -138,7 +138,11 @@ def fetchPlayersStats():
                     if c_id in CLASS_ID_MAP:
                         output[CLASS_ID_MAP[c_id]] = entry.get('exp', 0)
 
-        player_db_id = sql.get_player_id_by_name(player_data.get('username'))
+        player_uuid = player_data.get('uuid')
+        player_name = player_data.get('username')
+        if player_uuid and player_name:
+            sql.update_player_name(player_uuid, player_name)
+        player_db_id = sql.get_player_id_by_name(player_name)
         if player_db_id:
             sql.add_player_stats(player_db_id, output)
 
