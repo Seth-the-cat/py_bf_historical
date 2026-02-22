@@ -4,8 +4,10 @@ services:
     command: gunicorn -w 1 -b 0.0.0.0:8000 main:app
     ports:
       - "7479:8000"
+    env_file:
+      - .env
     volumes:
-      - ./data:/app/data  
+      - ./data:/app/data
     restart: always
     networks:
       - bf_shared_net
@@ -13,8 +15,10 @@ services:
   worker:
     build: .
     command: python clock.py
+    env_file:
+      - .env
     volumes:
-      - ./data:/app/data  
+      - ./data:/app/data
     restart: always
     networks:
       - bf_shared_net

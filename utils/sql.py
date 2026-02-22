@@ -148,10 +148,10 @@ def add_player_stats(player_id, stats):
     prestige = stats.get('prestige', 0)
     rifle_xp = stats.get('rifle_xp', 0)
     lt_rifle_xp = stats.get('lt_rifle_xp', 0)
-    assault_xp = stats.get('assault_xp', 0)  # fixed typo (was assult_xp)
+    assault_xp = stats.get('assault_xp', 0)
     support_xp = stats.get('support_xp', 0)
     medic_xp = stats.get('medic_xp', 0)
-    sniper_xp = stats.get('sniper_xp', 0)    # fixed typo (was sinper_xp)
+    sniper_xp = stats.get('sniper_xp', 0)
     gunner_xp = stats.get('gunner_xp', 0)
     anti_tank_xp = stats.get('anti_tank_xp', 0)
     commander_xp = stats.get('commander_xp', 0)
@@ -159,15 +159,62 @@ def add_player_stats(player_id, stats):
     total_games = stats.get('total_games', 0)
     match_wins = stats.get('match_wins', 0)
     time_played = stats.get('time_played', 0)
-
-    print(len([player_id, kills, assists, deaths, headshots, backstabs, no_scopes, first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, sniper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, match_wins, time_played]))
+    
+    stat_values = (
+        kills, assists, deaths, headshots, backstabs, no_scopes, 
+        first_bloods, fire_kills, bot_kills, infected_kills, 
+        infected_rounds_won, infected_matches_won, vehicle_kills, 
+        highest_kill_streak, highest_death_streak, exp, prestige, 
+        rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, 
+        sniper_xp, gunner_xp, anti_tank_xp, commander_xp, 
+        match_karma, total_games, match_wins, time_played
+    )
 
     with get_cursor() as cur:
-        sql = ''' INSERT INTO player_stats(player_id, kills, assists, deaths, headshots, backstabs, no_scopes, first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, sniper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, match_wins, time_played)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) '''
-        cur.execute(sql, (player_id, kills, assists, deaths, headshots, backstabs, no_scopes, first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, sniper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, match_wins, time_played))
-        last_id = cur.lastrowid
-        return last_id
+        # 1. Fetch the last two entries for this player
+        # We explicitly list the columns to avoid pulling 'date', 'kdr', and 'hskr' into the comparison
+        cur.execute('''
+            SELECT stat_id, kills, assists, deaths, headshots, backstabs, no_scopes, 
+                   first_bloods, fire_kills, bot_kills, infected_kills, 
+                   infected_rounds_won, infected_matches_won, vehicle_kills, 
+                   highest_kill_streak, highest_death_streak, exp, prestige, 
+                   rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, 
+                   sniper_xp, gunner_xp, anti_tank_xp, commander_xp, 
+                   match_karma, total_games, match_wins, time_played
+            FROM player_stats
+            WHERE player_id = ?
+            ORDER BY stat_id DESC LIMIT 2
+        ''', (player_id,))
+        
+        last_two = cur.fetchall()
+
+        # 2. Check if the incoming stats match BOTH of the last two records
+        if len(last_two) == 2:
+            # We convert the Row objects to tuples and slice off [1:] to drop the 'stat_id' 
+            # so we are purely comparing the gameplay stats.
+            last_row_stats = tuple(last_two[0])[1:] 
+            prev_row_stats = tuple(last_two[1])[1:]
+
+            if stat_values == last_row_stats and stat_values == prev_row_stats:
+                # Duplicate streak confirmed! Delete the last row (which is the middle of the streak)
+                # The incoming INSERT below will replace it, dragging the timestamp forward.
+                cur.execute('DELETE FROM player_stats WHERE stat_id = ?', (last_two[0]['stat_id'],))
+
+        # 3. Insert the new record
+        sql = ''' INSERT INTO player_stats(
+                    player_id, kills, assists, deaths, headshots, backstabs, no_scopes, 
+                    first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, 
+                    infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, 
+                    exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, 
+                    sniper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, 
+                    match_wins, time_played
+                  ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) '''
+        
+        # Add the player_id to the front of our stat tuple and execute
+        cur.execute(sql, (player_id,) + stat_values)
+        
+        return cur.lastrowid
+    
 
 def get_players_uuids():
     """ Query all rows in the players table """
