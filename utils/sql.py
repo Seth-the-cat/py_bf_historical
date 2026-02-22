@@ -87,22 +87,19 @@ def create_connection(db_file=DB_FILE):
 
 @contextlib.contextmanager
 def get_cursor():
-    #TODO please test
     connection = create_connection()
     try:
+        connection.row_factory = sqlite3.Row 
         cursor = connection.cursor()
         yield cursor
         connection.commit()
-    except:
+    except Exception:
         if connection:
             connection.rollback()
-            raise
+        raise
     finally:
-        if cursor:
-            cursor.close()
         if connection:
             connection.close()
-
 
 def add_cloud_stats(stats):
     """ Create a new stats entry into the stats table """
@@ -176,6 +173,13 @@ def get_players_uuids():
     """ Query all rows in the players table """
     with get_cursor() as cur:
         cur.execute("SELECT uuid FROM players")
+        rows = cur.fetchall()
+        return rows
+    
+def get_players_names():
+    """ Query all rows in the players table """
+    with get_cursor() as cur:
+        cur.execute("SELECT name FROM players")
         rows = cur.fetchall()
         return rows
 

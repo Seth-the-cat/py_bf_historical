@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request
 from fetchStats import fetchStats, fetchMatchStats
 import utils.sql as sql
+import utils.html
 import bleach
 
 app = Flask(__name__)
@@ -72,13 +73,14 @@ def check_if_tracking(username):
     if sql.check_player(username):
         print("Player_id: ",test:=sql.get_player_id_by_name(username))
         print(sql.get_player_stats(test))
-        return render_template('player.html', response=sql.get_player_stats(1))
+        return render_template('player.html', response=utils.html.gen_html_table_from_player_stats(sql.get_player_stats(test)))
     else:
-        return render_template('player.html', response=f"<i>{username}</i>'s stats are not being tracked")
+        return render_template('player.html', response=f"<i>{username}</i>'s stats are not being tracked. <br> <a href='/addplayer'>Click here to add them.</a>")
 
 @app.route('/findplayer')
 def find_player():
-    return render_template('findplayer.html')
+    # print(sql.get_players_names())
+    return render_template('findplayer.html', response=utils.html.gen_html_table_of_players(sql.get_players_names()))
 
 @app.errorhandler(404)
 def not_found(e):

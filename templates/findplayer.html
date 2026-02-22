@@ -43,6 +43,15 @@
         </div>
     </nav>
     <br><br><br>
-    <main style="text-align: center;">Input username to view a player's stats over time: <input onkeyup="if(event.key==='Enter'){location.href='/player/'+this.value};" type="text"></input></main>
+    <main style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+        <div>
+            Input username to view a player's stats over time: 
+            <input onkeyup="if(event.key==='Enter'){location.href='/player/'+this.value};" type="text">
+        </div>
+    
+        <div style="width: 100%; padding: 0.3em;">   
+            {{response|safe}}
+        </div>
+    </main>
     </body>
 </html>
