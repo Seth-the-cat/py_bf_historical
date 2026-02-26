@@ -1,3 +1,4 @@
+import logging
 from flask import Flask, render_template, request
 from fetchStats import fetchStats, fetchMatchStats
 import utils.sql as sql
@@ -5,7 +6,6 @@ import utils.html
 import bleach
 
 app = Flask(__name__)
-
 
 @app.context_processor
 def inject_global_stats():
@@ -62,6 +62,7 @@ def chartPage():
 
 @app.route('/api/addplayer', methods=['POST'])
 def track_player():
+    app.logger.info("Trying to add new player")
     if request.method == 'POST':
         username = request.form.get('username')
         try:
@@ -72,10 +73,11 @@ def track_player():
 
 @app.route('/player/<username>')
 def check_if_tracking(username):
-    print(sql.check_player(username))
+    app.logger.debug(sql.check_player(username))
     if sql.check_player(username):
-        print("Player_id: ",test:=sql.get_player_id_by_name(username))
-        print(sql.player_graph_data(test))
+        test = sql.get_player_id_by_name(username)
+        app.logger.info(f"Player_id: {test}")
+        app.logger.debug(sql.player_graph_data(test))
         return render_template('player.html', response=utils.html.gen_html_table_from_player_stats(sql.get_player_stats(test)), raw_data=sql.player_graph_data(test))
     else:
         return render_template('player.html', response=f"<i>{username}</i>'s stats are not being tracked. <br> <a href='/addplayer'>Click here to add them.</a>")
@@ -91,4 +93,10 @@ def not_found(e):
 
 if __name__ == '__main__':
     # You can keep this specifically for local testing if you want
+    app.logger.setLevel(logging.DEBUG)
+    
+    logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+        )
     app.run(debug=True, use_reloader=True)

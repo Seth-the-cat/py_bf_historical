@@ -1,34 +1,20 @@
-import os
-import requests
-from requests import RequestException
-from typing import Any, Dict, Optional
-from datetime import datetime
-from dotenv import load_dotenv
+
+import logging
+from utils import network
 from utils.html import gen_html_from_players
+from dotenv import load_dotenv
 
 load_dotenv()
 
 import utils.sql as sql
+logger = logging.getLogger(__name__)
 
-# Base API URL read from environment or .env file. Defaults to the previous hardcoded value.
-API_BASE_URL = os.getenv("API_BASE_URL", "https://blockfrontapi.vuis.dev")
 
-def get_json(url: str, params: Optional[Dict[str, Any]] = None, timeout: float = 5.0) -> Dict[str, Any]:
-    """Send a GET request to the given URL and parse the response as JSON."""
-    try:
-        response = requests.get(url, params=params, timeout=timeout)
-        response.raise_for_status()
-        return response.json()
-    except RequestException as exc:
-        raise exc
-    except ValueError:
-        raise ValueError(f"Response from {url} was not valid JSON.")
 
 def fetchCloudStats():
-    data = get_json(f"{API_BASE_URL}/api/v1/cloud_data")
-    print("\nFetch Process: Fetched cloud stats")
-    print("\nFetch Process: Storing stats in database...")
-    # guard against unexpected types from the API (e.g., string instead of dict)
+    data = network.get_request("/api/v1/cloud_data")
+    logger.info("\nFetch Process: Fetched cloud stats")
+    logger.info("\nFetch Process: Storing stats in database...")
     game_player_count = data.get("game_player_count") if isinstance(data.get("game_player_count"), dict) else {}
     data_tuple = (
         data.get("players_online"),
@@ -44,29 +30,29 @@ def fetchCloudStats():
 def fetchMatchStats(name: str):
     def addMuted(j):
         # tolerate non-dict values (some API responses may be unexpected types)
-        print(j)
+        logger.debug(j)
         if not isinstance(j, dict) or j == {}:
             return ''
         return ' 🔇'
      
     try:
-        data = get_json(f"{API_BASE_URL}/api/v1/player_status?name={name}")
+        data = network.get_request(f"/api/v1/player_status?name={name}")
     except:
         return f"<h3> <span style='color: red;'>Something went wrong... Check if <i>{name}</i> is a real player! </span></h3>", "⚠️ Failed to fetch match stats"
 
     if not data.get("online"):
-        print("Player is offline.")
+        logger.info("Player is offline.")
         return f"{name} is offline.", "Player is offline."
     match = data.get("match")
     if not match:
-        print("No match data found for player.")
+        logger.info("No match data found for player.")
         return "Name not found or player is not in a match.", "No match data found for player."
     uuids = [p["uuid"] for p in match.get("players", [])]
-    print("\nFetch Process: Fetched player UUIDs")
+    logger.info("\nFetch Process: Fetched player UUIDs")
     uuids_str = ",".join(uuids)
-    print(uuids_str)
+    logger.debug(uuids_str)
 
-    resp = requests.post(f"{API_BASE_URL}/api/v1/player_data/bulk", data=uuids_str).json()
+    resp = network.post_request("/api/v1/player_data/bulk", data=uuids_str)
     players_in_match = []
     for p in resp:
         punishments = p.get("punishments") if isinstance(p.get("punishments"), dict) else {}
@@ -87,46 +73,15 @@ def fetchMatchStats(name: str):
     return gen_html_from_players(players_in_match), f"{len(players_in_match)} out of {match.get('max_players')} players in match."
 
 def fetchPlayersStats():
-    uuids_list = [tup[0] for tup in sql.get_players_uuids()]
-    if not uuids_list:
+    uuids = ",".join([tup[0] for tup in sql.get_players_uuids()])
+    if uuids == "":
+        logger.info("No players to fetch stats for.")
         return
-
-    # 1. Safely add dashes back to the UUIDs
-    formatted_uuids = []
-    for u in uuids_list:
-        clean_u = u.strip()
-        if len(clean_u) == 32:
-            formatted_uuids.append(f"{clean_u[:8]}-{clean_u[8:12]}-{clean_u[12:16]}-{clean_u[16:20]}-{clean_u[20:]}")
-        else:
-            formatted_uuids.append(clean_u)
-
-    # 2. Setup our batches
-    chunk_size = 50
-    all_player_data = []
-    
-    print(f"🕵️  Sending {len(formatted_uuids)} UUIDs to API in batches of {chunk_size}...")
-
-    # 3. Loop through the list 50 at a time
-    for i in range(0, len(formatted_uuids), chunk_size):
-        chunk = formatted_uuids[i:i + chunk_size]
-        uuids_str = ",".join(chunk)
-        
-        try:
-            response = requests.post(f"{API_BASE_URL}/api/v1/player_data/bulk", data=uuids_str)
-            resp = response.json()
-            
-            if isinstance(resp, dict):
-                resp = [resp]
-            if isinstance(resp, list):
-                all_player_data.extend(resp)
-        except Exception as e:
-            print(f"⚠️ Failed to fetch a batch: {e}")
-            continue
-
-    print(f"✅ API successfully returned data for {len(all_player_data)} players total!")
-
-    # 4. Process all the data!
-    DIRECT_FEILD = ['kills', 'deaths', 'assists', 'infected_kills', 'vehicle_kills', 'bot_kills', 'infected_rounds_won', 'infected_matches_won', 'highest_kill_streak', 'highest_death_streak', 'exp', 'prestige', 'total_games', 'time_played', 'no_scopes', 'first_bloods', 'fire_kills', 'match_karma']
+    logger.info(uuids)
+    all_player_data = network.post_request("/api/v1/player_data/bulk",data=uuids)
+    output = {}
+    DIRECT_FEILD = [
+    'kills', 'deaths', 'assists', 'infected_kills', 'vehicle_kills', 'bot_kills', 'infected_rounds_won', 'infected_matches_won', 'highest_kill_streak', 'highest_death_streak', 'exp', 'prestige', 'total_games', 'time_played', 'no_scopes', 'first_bloods', 'fire_kills', 'match_karma']
     MAPPING = {'back_stabs': 'backstabs', 'head_shots': 'headshots', 'trophies': 'match_wins'}
     CLASS_ID_MAP = {0: 'rifle_xp', 1: 'lt_rifle_xp', 2: 'assault_xp', 3: 'support_xp', 4: 'medic_xp', 5: 'sniper_xp', 6: 'gunner_xp', 7: 'anti_tank_xp', 9: 'commander_xp'}
 
@@ -142,25 +97,16 @@ def fetchPlayersStats():
         for key, mapped_key in MAPPING.items():
             if key in player_data:
                 output[mapped_key] = player_data[key]
-        
-        class_exp = player_data.get('class_exp', [])
-        if isinstance(class_exp, list):
-            for entry in class_exp:
-                if isinstance(entry, dict):
-                    c_id = entry.get('id')
-                    if c_id in CLASS_ID_MAP:
-                        output[CLASS_ID_MAP[c_id]] = entry.get('exp', 0)
-
-        player_uuid = player_data.get('uuid') # Keep the dashes!
-        player_name = player_data.get('username')
-
-        # 6. Save the name and stats
-        if player_uuid and player_name:
-            sql.update_player_name(player_uuid, player_name)
-            
-        player_db_id = sql.get_player_id_by_name(player_name)
-        if player_db_id:
-            sql.add_player_stats(player_db_id, output)
+        for entry in player_data.get('class_exp', []):
+                c_id = entry.get('id')
+                if c_id in CLASS_ID_MAP:
+                    output[CLASS_ID_MAP[c_id]] = entry.get('exp', 0)
+        # find player's DB id by UUID, skip if not present
+        player_db_id = sql.get_player_id_by_name(player_data['username'])
+        if not player_db_id:
+            logger.info(f"Skipping player {player_data.get('username')} ({player_data.get('uuid')}): not found in DB")
+            continue
+        sql.add_player_stats(player_db_id, output)
 
 def fetchStats():
     fetchCloudStats()

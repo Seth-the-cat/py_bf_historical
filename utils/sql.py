@@ -1,14 +1,16 @@
 import contextlib
+import logging
 from pathlib import Path
 import sqlite3
-import requests
 import os
 import json
+import utils.network as network
+
 
 DATA_DIR = Path("./data")
 # Ensure the 'data' directory exists before we try to connect
 os.makedirs(DATA_DIR,exist_ok=True)
-   
+logger = logging.getLogger(__name__)
 
 DB_FILE = os.path.join(DATA_DIR, 'stats.db')
 
@@ -19,7 +21,7 @@ def create_connection(db_file=DB_FILE):
     try:
         conn = sqlite3.connect(db_file)
     except sqlite3.Error as e:
-        print(f"Error connecting to database at {db_file}: {e}")
+        logger.error(f"Error connecting to database at {db_file}: {e}")
         return None
 
     # check if table exists, if not create it
@@ -29,15 +31,15 @@ def create_connection(db_file=DB_FILE):
             cur.execute("PRAGMA foreign_keys = ON;")
         cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cloud_stats';")
         if cur.fetchone() is None:
-            print("Table 'cloud_stats' not found. Creating it...")
+            logger.warning("Table 'cloud_stats' not found. Creating it...")
             cur.execute("CREATE TABLE cloud_stats (id integer PRIMARY KEY, date DATETIME DEFAULT CURRENT_TIMESTAMP, players_online integer, players_in_dom integer, players_in_tdm integer, players_in_inf integer, players_in_gg integer, players_in_ttt integer, players_in_boot integer)")
             conn.commit()
         if cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='players';").fetchone() is None:
-            print("Table 'players' not found. Creating it...")
+            logger.warning("Table 'players' not found. Creating it...")
             cur.execute("CREATE TABLE players (id integer PRIMARY KEY, uuid text UNIQUE, name text UNIQUE)")
             conn.commit()
         if cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='player_stats';").fetchone() is None:
-            print("Table 'player_stats' not found. Creating it...")
+            logger.warning("Table 'player_stats' not found. Creating it...")
             create_table_sql = """
                                 CREATE TABLE IF NOT EXISTS player_stats (
                                     stat_id INTEGER PRIMARY KEY,
@@ -81,7 +83,7 @@ def create_connection(db_file=DB_FILE):
             cur.execute(create_table_sql)
             conn.commit()
     except sqlite3.Error as e:
-        print(f"Error creating table: {e}")
+        logger.error(f"Error creating table: {e}")
 
     return conn
 
@@ -103,7 +105,7 @@ def get_cursor():
 
 def add_cloud_stats(stats):
     """ Create a new stats entry into the stats table """
-    with get_cursor() as cur: #
+    with get_cursor() as cur:
         sql = ''' INSERT INTO cloud_stats(players_online, players_in_dom, players_in_tdm, players_in_inf, players_in_gg, players_in_ttt, players_in_boot)
                 VALUES(?,?,?,?,?,?,?) '''
         cur.execute(sql, stats)
@@ -112,10 +114,11 @@ def add_cloud_stats(stats):
 
 def add_player(username):
     """ Create a new player entry into the players table """
-    result = requests.get(f"https://api.mojang.com/users/profiles/minecraft/{username}").json()
-    if not result.get("id",None):
+    try:
+        result = network.get_request("/api/v1/player_data",params={"name": username})
+    except Exception as e:
         raise ValueError(f"Invalid username: '{username}'")
-    uuid = result["id"]
+    uuid = result["uuid"]
     with get_cursor() as cur:
         sql = ''' INSERT INTO players(uuid, name)
                 VALUES(?, ?) '''
@@ -248,7 +251,7 @@ def get_player_stats(player_id):
     with get_cursor() as cur:
         cur.execute("SELECT * FROM player_stats WHERE player_id=?", (player_id,))
         rows = cur.fetchall()
-        print(rows)
+        logger.debug(rows)
         return rows
 
 def check_player(name):
@@ -346,17 +349,17 @@ def update_player_name(player_uuid, player_name):
         cur.connection.commit() # Ensure the change is saved!
 # Runable functions for testing/debugging
 if __name__ == '__main__':
-    print(f"Database Path: {DB_FILE}")
-    print("Runable functions:\n1. Create Connection\n2. add_stats(stats_tuple)\n3. get_all_stats()\n4. get_latest_stats()\n5. two_cols_of_stats()\n6. clear_stats()")
+    logger.info(f"Database Path: {DB_FILE}")
+    logger.info("Runable functions:\n1. Create Connection\n2. add_stats(stats_tuple)\n3. get_all_stats()\n4. get_latest_stats()\n5. two_cols_of_stats()\n6. clear_stats()")
     choice = input("Enter the number of the function you want to run: ")
     
     if choice == "1":
         conn = create_connection()
         if conn:
-            print("Connection to database established.")
+            logger.info("Connection to database established.")
             conn.close()
         else:
-            print("Failed to establish connection.")
+            logger.error("Failed to establish connection.")
             
     elif choice == "2":
         print("Enter stats as comma-separated values (date, players_online, players_in_dom, players_in_tdm, players_in_inf, players_in_gg, players_in_ttt, players_in_boot):")

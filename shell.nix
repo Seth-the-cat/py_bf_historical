@@ -10,6 +10,7 @@ pkgs.mkShell {
         pkgs.python3Packages.python-dotenv
         pkgs.python3Packages.beautifulsoup4
         pkgs.python3Packages.apscheduler
+        pkgs.python3Packages.aiohttp
         pkgs.sqlite
     ];
 
