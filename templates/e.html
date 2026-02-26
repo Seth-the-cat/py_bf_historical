@@ -20,6 +20,51 @@
       font-family: Arial, Helvetica, sans-serif;
     }
     .line { fill: none; stroke-width: 1.5px; }
+    .legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 10px;
+    font-family: sans-serif;
+    color: white;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 14px;
+        cursor: default;
+    }
+    .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
+    /* Style for your D3 tooltip which might be invisible right now */
+    .tooltip {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.85);
+        border: 1px solid #444;
+        padding: 8px;
+        color: white;
+        pointer-events: none;
+        font-size: 12px;
+        border-radius: 4px;
+        z-index: 10;
+    }
+    .tooltip {
+      position: absolute;
+      background: rgba(10, 10, 10, 0.9);
+      border: 1px solid #555; /* Adds a subtle border */
+      padding: 10px;
+      color: white;
+      pointer-events: none;
+      font-size: 13px;
+      border-radius: 4px;
+      z-index: 100; /* Ensures it stays on top of the legend */
+      line-height: 1.4;
+    }
 </style>
 
 <div id="myplot"></div>
@@ -30,9 +75,10 @@ import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 // raw data injected by server
 const raw = {{raw_data | safe}};
 
+
 // parse data and normalize numeric fields
 raw.forEach(d => {
-  d.date = new Date(d.Date);
+  d.date = new Date(d.Date + "Z");
   d.Players = +d.Players;
   d.Dom = +d.Dom;
   d.TDM = +d.TDM;
@@ -68,8 +114,9 @@ const oneDayAgo = new Date(now.getTime() - 24*60*60*1000);
 const minDate = d3.min(raw, d => d.date);
 const maxDate = d3.max(raw, d => d.date);
 
+
 const x = d3.scaleTime()
-  .domain([oneDayAgo, now])
+  .domain([d3.timeHour.offset(maxDate, -24), maxDate]) // Subtracts 24 hours from maxDate
   .range([0, width]);
 
 // y domain across all series
@@ -122,9 +169,27 @@ const overlay = svg.append('rect')
   .style('pointer-events','all');
 
 // tooltip + vertical line
-const focus = svg.append('g').style('display','none');
-focus.append('line').attr('class','vline').attr('y1',0).attr('y2',height).style('stroke','#fff').style('stroke-opacity',0.7);
+// --- Update the 'focus' group setup ---
+const focus = svg.append('g').style('display', 'none');
 
+// Existing vertical line
+focus.append('line')
+  .attr('class', 'vline')
+  .attr('y1', 0)
+  .attr('y2', height)
+  .style('stroke', '#fff')
+  .style('stroke-opacity', 0.5);
+
+// NEW: Add a circle for each data series
+const circles = focus.selectAll('.focus-circle')
+  .data(keys)
+  .enter()
+  .append('circle')
+  .attr('class', 'focus-circle')
+  .attr('r', 4) // Size of the dot
+  .style('fill', d => color(d)) // Match line color
+  .style('stroke', 'white')
+  .style('stroke-width', 1);
 const tooltip = d3.select('#myplot').append('div').attr('class','tooltip');
 
 const bisectDate = d3.bisector(d => d.date).left;
@@ -170,26 +235,55 @@ function zoomed(event) {
   linesG.selectAll('.line').attr('d', d => d3.line().x(d2 => useX(d2.date)).y(d2 => y(d2.value))(d.values));
 }
 
+// Create Legend Container
+const legendContainer = d3.select('#myplot')
+  .insert('div', 'svg') // Put it before the SVG
+  .attr('class', 'legend');
+
+// Add items to legend based on your 'keys' array
+keys.forEach(key => {
+  const item = legendContainer.append('div').attr('class', 'legend-item');
+  
+  item.append('div')
+    .attr('class', 'legend-color')
+    .style('background-color', color(key));
+    
+  item.append('span').text(key);
+});
+
 // pointer interactions
-overlay.on('mouseover', () => { focus.style('display', null); tooltip.style('display','block'); })
-  .on('mouseout', () => { focus.style('display','none'); tooltip.style('display','none'); })
+overlay
+  .on('mouseover', () => { 
+      focus.style('display', null); 
+      tooltip.style('display', 'block'); 
+  })
+  .on('mouseout', () => { 
+      focus.style('display', 'none'); 
+      tooltip.style('display', 'none'); 
+  })
   .on('mousemove', (event) => {
-    // get current transform & scale so pointer aligns with zoom/pan
-    const transform = d3.zoomTransform(overlay.node());
-    const currX = transform.rescaleX(x);
+      const transform = d3.zoomTransform(overlay.node());
+      const currX = transform.rescaleX(x);
 
-    const [mx] = d3.pointer(event);
-    const x0 = currX.invert(mx);
-    const i = bisectDate(raw, x0);
-    const d0 = raw[i-1] || raw[i];
-    if (!d0) return;
+      const [mx] = d3.pointer(event);
+      const x0 = currX.invert(mx);
+      
+      // Find the data point closest to the mouse
+      const i = bisectDate(raw, x0);
+      const d0 = raw[i-1] || raw[i];
+      if (!d0) return;
 
-    const px = currX(d0.date);
-    focus.attr('transform', `translate(${px},0)`);
+      const px = currX(d0.date);
+      focus.attr('transform', `translate(${px},0)`);
 
-    tooltip.html(`Time: ${d0.date.toLocaleString()}<br/>` + keys.map(k => `${k}: ${d0[k]}`).join('<br/>'))
-      .style('left', (event.pageX + 12) + 'px')
-      .style('top', (event.pageY - 28) + 'px');
+      // Position each dot on its respective line
+      circles.attr('cy', key => y(d0[key])); 
+
+      // Update tooltip content and position
+      tooltip.html(`<strong>${d0.date.toLocaleString()}</strong><br/>` + 
+          keys.map(k => `<span style="color:${color(k)}">●</span> ${k}: ${d0[k]}`).join('<br/>'))
+        .style('left', (event.pageX + 15) + 'px')
+        .style('top', (event.pageY - 28) + 'px');
   });
 
 </script>

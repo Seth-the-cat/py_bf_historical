@@ -8,41 +8,47 @@
     <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/index.css')}}"/>
 </head>
 <body>
-    <nav>
-        <div id="menu">
-            <h1><a href="{{url_for('index')}}">Blockfront historical</a></h1>
-            <ul id="topinfo">
-                <li><strong>{{players_online}}</strong> players online</li>
-                <li id="last_update" title="Stats are fetched every 10 minutes"></li>
-                <li><a href="{{url_for('find_player')}}">Player Stats</a></li>
-                <li><a href="{{url_for('find_match')}}">Match Stats</a></li>   
-                <li><a href="https://github.com/seth-the-cat/py_bf_historical">Github</a></li>
-            </ul>
-            <script>
-                const lastUpdated = new Date("{{last_updated}}");
-                function updateLastUpdated() {
-                    const now = new Date();
-                    const diffMs = now - lastUpdated;
-                    const diffMins = Math.floor(diffMs / 60000);
-                    const diffSecs = Math.floor((diffMs % 60000) / 1000);
-                    let displayText = "Last updated ";
-                    if (diffMins >= 10 & diffMins < 11) {
-                        location.reload();
-                    } if (diffMins > 11) {
-                        displayText += `${diffMins} minutes ago. ⚠️ Stats fetching likely down. Contact seththecat.`;
-                    } if (diffMins > 0) {
-                        displayText += `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
-                    } else {
-                        displayText += `${diffSecs} second${diffSecs !== 1 ? 's' : ''} ago`;
-                    }
-                    document.getElementById("last_update").innerText = displayText;
-                }
-                setInterval(updateLastUpdated, 1000);
-                updateLastUpdated();
-            </script>
-        </div>
-    </nav>
+    {% include 'nav.html' %}
     <br><br><br>
-    <main style="text-align: center;">Input username to view a player's stats over time: <input onkeyup="if(event.key==='Enter'){location.href='/player/'+this.value};" type="text"></input></main>
+    <main style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+        <div>
+            Input username to view a player's stats over time: 
+            <input onkeyup="if(event.key==='Enter'){location.href='/player/'+this.value};" type="text">
+        </div>
+    
+        <style>
+            .player-grid {
+                display: grid;
+                /* This creates the tiles! */
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                gap: 15px;
+                padding: 20px;
+                /* ADD THESE TWO LINES */
+                width: 100%; 
+                max-width: 1200px; 
+            }
+            .player-card {
+                background: #000000;
+                padding: 10px;
+                border-radius: 5px;
+                text-align: center;
+                border: 1px solid #ffffff;
+                transition: background-color 0.3s ease;
+                color: #efefef;
+                text-decoration: none;
+            }
+            .player-card:hover {
+                background-color: #ffffff;
+                color: #000000; /* Forces text to black when background turns white */
+                cursor: pointer;
+            }
+        </style>
+
+        <div class="player-grid">
+            {% for player in players %}
+                <button class="player-card" onclick="location.href='/player/{{ player.name }}'">{{player.name}}</button>
+            {% endfor %}
+        </div>
+    </main>
     </body>
 </html>

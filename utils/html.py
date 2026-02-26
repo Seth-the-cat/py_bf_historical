@@ -9,3 +9,42 @@ def gen_html_from_players(players):
         for p in players
     )
     return "<table><tr><th>Username</th><th>Prestige</th><th>Rank</th><th>Kills</th><th>Deaths</th><th>KDR</th></tr>" + rows + "</table>"
+
+def gen_html_table_from_player_stats(player_stats_list):
+    if not player_stats_list:
+        return "<p>No history found for this player.</p>"
+
+    # player_stats_list[0] is now a Row object, which has .keys()
+    all_headers = player_stats_list[0].keys()
+    
+    # Optional: Filter out internal IDs to keep the table clean
+    exclude = ['stat_id', 'player_id']
+    headers = [h for h in all_headers if h not in exclude]
+
+    # Generate Header HTML
+    header_html = "".join(f"<th>{h.replace('_', ' ').title()}</th>" for h in headers)
+    
+    # Generate Row HTML
+    rows_html = ""
+    for row in player_stats_list:
+        cells = ""
+        for h in headers:
+            val = row[h]
+            # Clean up floats (like KDR or HSKR)
+            if isinstance(val, float):
+                val = f"{val:.2f}"
+            # Handle None/Null values
+            if val is None:
+                val = "-"
+            cells += f"<td>{val}</td>"
+        rows_html += f"<tr>{cells}</tr>"
+
+    
+    return f"<div style='overflow-x:auto;'><table class='stats-table'><thead>{header_html}</thead><tbody>{rows_html}</tbody></table></div>"
+
+def gen_html_table_of_players(player_rows):
+    rows = "".join(
+        f"<tr><td><a href='/player/{row['name']}'>{row['name']}</a></td></tr>" 
+        for row in player_rows
+    )
+    return "<table><tr><th>Player Name</th></tr>" + rows + "</table>"

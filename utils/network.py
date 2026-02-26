@@ -1,9 +1,14 @@
 import asyncio
+import os
 from typing import Any, Dict, List, Optional, Union
+from dotenv import load_dotenv
 import aiohttp
 import logging
 logger = logging.getLogger(__name__)
-BASE_BLOCKFRONT_URL = "https://blockfrontapi.vuis.dev"
+load_dotenv()
+# Base API URL read from environment or .env file. Defaults to the previous hardcoded value.
+BASE_BLOCKFRONT_URL = os.getenv("API_BASE_URL", "https://blockfrontapi.vuis.dev")
+
 #TODO possibly re-use Clients
 async def async_post_request(endpoint:str,data: Optional[Dict[str, Any]] = None,baseurl:str=BASE_BLOCKFRONT_URL,timeout: float = 15.0,is_json:bool= False)->Union[Dict, List, str]:
     async with aiohttp.ClientSession() as client:

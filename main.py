@@ -2,28 +2,32 @@ import logging
 from flask import Flask, render_template, request
 from fetchStats import fetchStats, fetchMatchStats
 import utils.sql as sql
+import utils.html
 import bleach
 
 app = Flask(__name__)
 
-@app.route("/")
-def index():
+@app.context_processor
+def inject_global_stats():
     try:
         latest_stats = sql.get_latest_stats()
         players_online = latest_stats[2]
         last_updated = latest_stats[1]
+    except Exception as e:
+        players_online = "N/A"
+        last_updated = "N/A"
+    return dict(players_online=players_online, last_updated=last_updated)
+
+@app.route("/")
+def index():
+    try:
         raw_data = sql.graph_data()
     except TypeError:
         fetchStats()
-        latest_stats = sql.get_latest_stats()
-        players_online = latest_stats[2]
-        last_updated = latest_stats[1]
         raw_data = sql.graph_data()
     except Exception as e:
         return f"<p>Error retrieving stats: {e}</p>"
     return render_template('index.html',
-    players_online=players_online,
-    last_updated=last_updated,
     raw_data=raw_data
     )
 
@@ -73,14 +77,15 @@ def check_if_tracking(username):
     if sql.check_player(username):
         test = sql.get_player_id_by_name(username)
         app.logger.info(f"Player_id: {test}")
-        app.logger.debug(sql.get_player_stats(test))
-        return render_template('player.html', response=sql.get_player_stats(1))
+        app.logger.debug(sql.player_graph_data(test))
+        return render_template('player.html', response=utils.html.gen_html_table_from_player_stats(sql.get_player_stats(test)), raw_data=sql.player_graph_data(test))
     else:
-        return render_template('player.html', response=f"<i>{username}</i>'s stats are not being tracked")
+        return render_template('player.html', response=f"<i>{username}</i>'s stats are not being tracked. <br> <a href='/addplayer'>Click here to add them.</a>")
 
 @app.route('/findplayer')
 def find_player():
-    return render_template('findplayer.html')
+    # print(sql.get_players_names())
+    return render_template('findplayer.html', players=sql.get_players_names())
 
 @app.errorhandler(404)
 def not_found(e):

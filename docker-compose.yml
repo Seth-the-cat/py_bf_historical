@@ -1,18 +1,28 @@
-version: '3.8'
-
 services:
   web:
     build: .
     command: gunicorn -w 1 -b 0.0.0.0:8000 main:app
     ports:
-      - "8000:8000"
+      - "7479:8000"
+    env_file:
+      - .env
     volumes:
-      - ./data:/app/data  # <--- Mounts a 'data' folder
+      - ./data:/app/data
     restart: always
+    networks:
+      - bf_shared_net
 
   worker:
     build: .
     command: python clock.py
+    env_file:
+      - .env
     volumes:
-      - ./data:/app/data  # <--- Must match the web volume!
+      - ./data:/app/data
     restart: always
+    networks:
+      - bf_shared_net
+
+networks:
+  bf_shared_net:
+    external: true

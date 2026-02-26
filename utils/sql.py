@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 import sqlite3
 import os
+import json
 import utils.network as network
 
 
@@ -90,19 +91,17 @@ def create_connection(db_file=DB_FILE):
 def get_cursor():
     connection = create_connection()
     try:
+        connection.row_factory = sqlite3.Row 
         cursor = connection.cursor()
         yield cursor
         connection.commit()
-    except:
+    except Exception:
         if connection:
             connection.rollback()
-            raise
+        raise
     finally:
-        if cursor:
-            cursor.close()
         if connection:
             connection.close()
-
 
 def add_cloud_stats(stats):
     """ Create a new stats entry into the stats table """
@@ -132,51 +131,104 @@ def add_player_stats(player_id, stats):
     if not player_id:
         raise ValueError(f"Invalid player_id: {player_id}")
 
-    # Use safe lookups with defaults to avoid KeyError if fields are missing
-    kills = stats.get('kills', 0)
-    assists = stats.get('assists', 0)
-    deaths = stats.get('deaths', 0)
-    headshots = stats.get('headshots', 0)
-    backstabs = stats.get('backstabs', 0)
-    no_scopes = stats.get('no_scopes', 0)
-    first_bloods = stats.get('first_bloods', 0)
-    fire_kills = stats.get('fire_kills', 0)
-    bot_kills = stats.get('bot_kills', 0)
-    infected_kills = stats.get('infected_kills', 0)
-    infected_rounds_won = stats.get('infected_rounds_won', 0)
-    infected_matches_won = stats.get('infected_matches_won', 0)
-    vehicle_kills = stats.get('vehicle_kills', 0)
-    highest_kill_streak = stats.get('highest_kill_streak', 0)
-    highest_death_streak = stats.get('highest_death_streak', 0)
-    exp = stats.get('exp', 0)
-    prestige = stats.get('prestige', 0)
-    rifle_xp = stats.get('rifle_xp', 0)
-    lt_rifle_xp = stats.get('lt_rifle_xp', 0)
-    assault_xp = stats.get('assault_xp', 0)  # fixed typo (was assult_xp)
-    support_xp = stats.get('support_xp', 0)
-    medic_xp = stats.get('medic_xp', 0)
-    sniper_xp = stats.get('sniper_xp', 0)    # fixed typo (was sinper_xp)
-    gunner_xp = stats.get('gunner_xp', 0)
-    anti_tank_xp = stats.get('anti_tank_xp', 0)
-    commander_xp = stats.get('commander_xp', 0)
-    match_karma = stats.get('match_karma', 0)
-    total_games = stats.get('total_games', 0)
-    match_wins = stats.get('match_wins', 0)
-    time_played = stats.get('time_played', 0)
+    # Helper function to ensure every stat is strictly an integer.
+    # This prevents the string "100" from failing to match the integer 100.
+    def get_int(key):
+        try:
+            return int(stats.get(key, 0))
+        except (ValueError, TypeError):
+            return 0
 
-    logger.debug(len([player_id, kills, assists, deaths, headshots, backstabs, no_scopes, first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, sniper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, match_wins, time_played]))
+    kills = get_int('kills')
+    assists = get_int('assists')
+    deaths = get_int('deaths')
+    headshots = get_int('headshots')
+    backstabs = get_int('backstabs')
+    no_scopes = get_int('no_scopes')
+    first_bloods = get_int('first_bloods')
+    fire_kills = get_int('fire_kills')
+    bot_kills = get_int('bot_kills')
+    infected_kills = get_int('infected_kills')
+    infected_rounds_won = get_int('infected_rounds_won')
+    infected_matches_won = get_int('infected_matches_won')
+    vehicle_kills = get_int('vehicle_kills')
+    highest_kill_streak = get_int('highest_kill_streak')
+    highest_death_streak = get_int('highest_death_streak')
+    exp = get_int('exp')
+    prestige = get_int('prestige')
+    rifle_xp = get_int('rifle_xp')
+    lt_rifle_xp = get_int('lt_rifle_xp')
+    assault_xp = get_int('assault_xp')
+    support_xp = get_int('support_xp')
+    medic_xp = get_int('medic_xp')
+    sniper_xp = get_int('sniper_xp')
+    gunner_xp = get_int('gunner_xp')
+    anti_tank_xp = get_int('anti_tank_xp')
+    commander_xp = get_int('commander_xp')
+    match_karma = get_int('match_karma')
+    total_games = get_int('total_games')
+    match_wins = get_int('match_wins')
+    time_played = get_int('time_played')
+
+    stat_values = (
+        kills, assists, deaths, headshots, backstabs, no_scopes, 
+        first_bloods, fire_kills, bot_kills, infected_kills, 
+        infected_rounds_won, infected_matches_won, vehicle_kills, 
+        highest_kill_streak, highest_death_streak, exp, prestige, 
+        rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, 
+        sniper_xp, gunner_xp, anti_tank_xp, commander_xp, 
+        match_karma, total_games, match_wins, time_played
+    )
 
     with get_cursor() as cur:
-        sql = ''' INSERT INTO player_stats(player_id, kills, assists, deaths, headshots, backstabs, no_scopes, first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, sniper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, match_wins, time_played)
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) '''
-        cur.execute(sql, (player_id, kills, assists, deaths, headshots, backstabs, no_scopes, first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, sniper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, match_wins, time_played))
-        last_id = cur.lastrowid
-        return last_id
+        cur.execute('''
+            SELECT stat_id, kills, assists, deaths, headshots, backstabs, no_scopes, 
+                   first_bloods, fire_kills, bot_kills, infected_kills, 
+                   infected_rounds_won, infected_matches_won, vehicle_kills, 
+                   highest_kill_streak, highest_death_streak, exp, prestige, 
+                   rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, 
+                   sniper_xp, gunner_xp, anti_tank_xp, commander_xp, 
+                   match_karma, total_games, match_wins, time_played
+            FROM player_stats
+            WHERE player_id = ?
+            ORDER BY stat_id DESC LIMIT 2
+        ''', (player_id,))
+        
+        last_two = cur.fetchall()
+
+        if len(last_two) == 2:
+            last_row_stats = tuple(last_two[0])[1:] 
+            prev_row_stats = tuple(last_two[1])[1:]
+
+            if stat_values == last_row_stats and stat_values == prev_row_stats:
+                # Streak continuing! Delete the middle entry.
+                cur.execute('DELETE FROM player_stats WHERE stat_id = ?', (last_two[0]['stat_id'],))
+
+        sql = ''' INSERT INTO player_stats(
+                    player_id, kills, assists, deaths, headshots, backstabs, no_scopes, 
+                    first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, 
+                    infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, 
+                    exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, 
+                    sniper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, 
+                    match_wins, time_played
+                  ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) '''
+        
+        cur.execute(sql, (player_id,) + stat_values)
+        
+        return cur.lastrowid
+    
 
 def get_players_uuids():
     """ Query all rows in the players table """
     with get_cursor() as cur:
         cur.execute("SELECT uuid FROM players")
+        rows = cur.fetchall()
+        return rows
+    
+def get_players_names():
+    """ Query all rows in the players table """
+    with get_cursor() as cur:
+        cur.execute("SELECT name FROM players")
         rows = cur.fetchall()
         return rows
 
@@ -251,12 +303,50 @@ def graph_data():
     output = "[\n" + ",\n".join(formatted_entries) + "\n]" 
     return output
 
+def player_graph_data(player_id):   
+    """ Query date and select columns from player_stats table for graphing """
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT date, kills, deaths, assists, headshots, match_wins, total_games 
+            FROM player_stats 
+            WHERE player_id = ? 
+            ORDER BY date ASC
+        """, (player_id,))
+        rows = cur.fetchall()
+        
+    formatted_entries = []
+    for row in rows:
+        date_str, kills, deaths, assists, headshots, match_wins, total_games = row
+        formatted_entries.append(
+            f'  {{Date: "{date_str}", Kills: {kills}, Deaths: {deaths}, '
+            f'Assists: {assists}, Headshots: {headshots}, Wins: {match_wins}, Games: {total_games}}}'
+        )
+
+    output = "[\n" + ",\n".join(formatted_entries) + "\n]" 
+    return output
+
 def clear_cloud_stats():
     """ Delete all rows in the stats table """
     with get_cursor() as cur:
         cur = conn.cursor()
         cur.execute("DELETE FROM cloud_stats")
 
+def update_player_name(player_uuid, player_name):
+    """Updates the player's name using the exact 36-char dashed UUID."""
+    if not player_uuid or not player_name:
+        return
+
+    # Keep the UUID exactly as provided (dashed, 36 chars)
+    clean_uuid = str(player_uuid).strip().lower()
+    clean_name = str(player_name).strip()
+
+    with get_cursor() as cur:
+        cur.execute('''
+            UPDATE players 
+            SET name = ? 
+            WHERE LOWER(uuid) = ?
+        ''', (clean_name, clean_uuid))
+        cur.connection.commit() # Ensure the change is saved!
 # Runable functions for testing/debugging
 if __name__ == '__main__':
     logger.info(f"Database Path: {DB_FILE}")
