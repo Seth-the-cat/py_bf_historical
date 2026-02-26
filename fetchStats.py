@@ -2,6 +2,7 @@
 import logging
 from utils import network
 from utils.html import gen_html_from_players
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -72,12 +73,12 @@ def fetchMatchStats(name: str):
     return gen_html_from_players(players_in_match), f"{len(players_in_match)} out of {match.get('max_players')} players in match."
 
 def fetchPlayersStats():
-    uuids = ", ".join([tup[0] for tup in sql.get_players_uuids()])
+    uuids = ",".join([tup[0] for tup in sql.get_players_uuids()])
     if uuids == "":
         logger.info("No players to fetch stats for.")
         return
     logger.info(uuids)
-    resp = network.post_request("/api/v1/player_data/bulk",data=uuids)
+    all_player_data = network.post_request("/api/v1/player_data/bulk",data=uuids)
     output = {}
     DIRECT_FEILD = [
     'kills', 'deaths', 'assists', 'infected_kills', 'vehicle_kills', 'bot_kills', 'infected_rounds_won', 'infected_matches_won', 'highest_kill_streak', 'highest_death_streak', 'exp', 'prestige', 'total_games', 'time_played', 'no_scopes', 'first_bloods', 'fire_kills', 'match_karma']

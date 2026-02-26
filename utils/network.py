@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 load_dotenv()
 # Base API URL read from environment or .env file. Defaults to the previous hardcoded value.
-BASE_BLOCKFRONT_URL = os.getenv("API_BASE_URL", "https://blockfrontapi.vuis.dev")
+BASE_BLOCKFRONT_URL = os.getenv("API_BASE_URL")
 
 #TODO possibly re-use Clients
 async def async_post_request(endpoint:str,data: Optional[Dict[str, Any]] = None,baseurl:str=BASE_BLOCKFRONT_URL,timeout: float = 15.0,is_json:bool= False)->Union[Dict, List, str]:
@@ -45,6 +45,7 @@ async def async_post_request(endpoint:str,data: Optional[Dict[str, Any]] = None,
             raise
 
 def post_request(endpoint:str,data: Optional[Dict[str, Any]] = None,baseurl=BASE_BLOCKFRONT_URL,timeout: float = 15.0,is_json:bool=False):
+    print(f"Making POST request to {baseurl}{endpoint} with data: {data}")
     '''Syncronous Wrapper for async function'''
     return asyncio.run(async_post_request(endpoint,data,baseurl=baseurl,timeout=timeout,is_json=is_json))
 
