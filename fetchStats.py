@@ -3,6 +3,8 @@ import logging
 from utils import network
 from utils.html import gen_html_from_players
 
+load_dotenv()
+
 import utils.sql as sql
 logger = logging.getLogger(__name__)
 
@@ -81,7 +83,11 @@ def fetchPlayersStats():
     'kills', 'deaths', 'assists', 'infected_kills', 'vehicle_kills', 'bot_kills', 'infected_rounds_won', 'infected_matches_won', 'highest_kill_streak', 'highest_death_streak', 'exp', 'prestige', 'total_games', 'time_played', 'no_scopes', 'first_bloods', 'fire_kills', 'match_karma']
     MAPPING = {'back_stabs': 'backstabs', 'head_shots': 'headshots', 'trophies': 'match_wins'}
     CLASS_ID_MAP = {0: 'rifle_xp', 1: 'lt_rifle_xp', 2: 'assault_xp', 3: 'support_xp', 4: 'medic_xp', 5: 'sniper_xp', 6: 'gunner_xp', 7: 'anti_tank_xp', 9: 'commander_xp'}
-    for player_data in resp:
+
+    for player_data in all_player_data:
+        if not isinstance(player_data, dict):
+            continue
+
         output = {}
         for field in DIRECT_FEILD:
             if field in player_data:
