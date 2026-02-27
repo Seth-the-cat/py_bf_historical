@@ -11,6 +11,7 @@ pkgs.mkShell {
         pkgs.python3Packages.beautifulsoup4
         pkgs.python3Packages.apscheduler
         pkgs.python3Packages.aiohttp
+        pkgs.python3Packages.matrix-nio
         pkgs.sqlite
     ];
 

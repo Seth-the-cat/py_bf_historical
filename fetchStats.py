@@ -2,9 +2,6 @@
 import logging
 from utils import network
 from utils.html import gen_html_from_players
-from dotenv import load_dotenv
-
-load_dotenv()
 
 import utils.sql as sql
 logger = logging.getLogger(__name__)

@@ -3,6 +3,7 @@ from flask import Flask, render_template, request
 from fetchStats import fetchStats, fetchMatchStats
 import utils.sql as sql
 import utils.html
+import utils.matrixbot as matrixbot
 import bleach
 
 app = Flask(__name__)
@@ -48,6 +49,7 @@ def add_player():
 @app.route("/stats_test")
 def stats_test():
     fetchStats()
+    matrixbot.send_notification("Manually triggered stats fetch")
     return f'<p>Latest stats: {sql.get_latest_stats()[1]}</p>'
 
 # Show players over time data
