@@ -3,7 +3,7 @@ import os
 import time
 import logging
 import threading
-from nio import AsyncClient
+from nio import AsyncClient, ErrorResponse, LoginResponse
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
