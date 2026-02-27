@@ -14,16 +14,23 @@ COOLDOWN_SECONDS = 60
 
 async def _async_send(message):
     user_id = os.getenv("MATRIX_USER_ID")
+    password = os.getenv("MATRIX_BOT_PASSWORD") # Switch to password
     homeserver = os.getenv("MATRIX_HOMESERVER", "https://matrix.org")
     room_id = os.getenv("MATRIX_ROOM_ID")
-    token = os.getenv("MATRIX_BOT_TOKEN")
 
     client = AsyncClient(homeserver, user_id)
-    client.access_token = token
     
     try:
-        # We use a timeout to ensure the bot doesn't hang forever
-        response = await asyncio.wait_for(
+        # 1. Login to get a fresh session
+        login_resp = await client.login(password)
+        
+        if isinstance(login_resp, ErrorResponse):
+            logger.error(f"Matrix Login Failed: {login_resp.message}")
+            return
+
+        # 2. Join and Send
+        await client.join(room_id)
+        await asyncio.wait_for(
             client.room_send(
                 room_id=room_id,
                 message_type="m.room.message",
@@ -31,10 +38,13 @@ async def _async_send(message):
             ), 
             timeout=10.0
         )
-        logger.debug(f"Matrix send response: {response}")
-        logger.info("Matrix notification sent successfully.")
+        logger.info("Matrix notification sent via password login.")
+        
+        # 3. Explicitly logout to clean up the session on the server
+        await client.logout()
+        
     except Exception as e:
-        logger.error(f"Failed to send Matrix notification: {e}")
+        logger.error(f"Matrix Failure: {e}")
     finally:
         await client.close()
 

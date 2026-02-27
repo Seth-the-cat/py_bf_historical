@@ -1,4 +1,4 @@
-aiodns==3.5.0
+aiodns
 apscheduler==3.11.1
 async-timeout==5.0.1
 backports-zstd==1.1.0
@@ -8,7 +8,7 @@ bleach==6.3.0
 brotli==1.2.0
 curio==1.6
 flask==3.1.2
-html5lib==1.2.dev0
+html5lib
 importlib-metadata==8.0.0
 jaraco.collections==5.1.0
 jsonpath-ng==1.7.0
@@ -19,3 +19,4 @@ python-dotenv==1.2.1
 requests==2.32.5
 tomli==2.0.1
 trio==0.32.0
+gunicorn==23.0.0
