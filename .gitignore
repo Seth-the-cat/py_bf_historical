@@ -1,2 +1,8 @@
 __pycache__/
-stats.db
+/data
+.DS_Store
+.direnv
+.env
+.envrc
+.idea
+.vscode

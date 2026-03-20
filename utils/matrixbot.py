@@ -1,0 +1,65 @@
+import asyncio
+import os
+import time
+import logging
+import threading
+from nio import AsyncClient, ErrorResponse, LoginResponse
+from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
+load_dotenv()
+
+last_notification_time = 0
+COOLDOWN_SECONDS = 60 
+
+async def _async_send(message):
+    user_id = os.getenv("MATRIX_USER_ID")
+    password = os.getenv("MATRIX_BOT_PASSWORD") # Switch to password
+    homeserver = os.getenv("MATRIX_HOMESERVER", "https://matrix.org")
+    room_id = os.getenv("MATRIX_ROOM_ID")
+
+    client = AsyncClient(homeserver, user_id)
+    
+    try:
+        # 1. Login to get a fresh session
+        login_resp = await client.login(password)
+        
+        if isinstance(login_resp, ErrorResponse):
+            logger.error(f"Matrix Login Failed: {login_resp.message}")
+            return
+
+        # 2. Join and Send
+        await client.join(room_id)
+        await asyncio.wait_for(
+            client.room_send(
+                room_id=room_id,
+                message_type="m.room.message",
+                content={"msgtype": "m.text", "body": message}
+            ), 
+            timeout=10.0
+        )
+        logger.info("Matrix notification sent via password login.")
+        
+        # 3. Explicitly logout to clean up the session on the server
+        await client.logout()
+        
+    except Exception as e:
+        logger.error(f"Matrix Failure: {e}")
+    finally:
+        await client.close()
+
+def send_notification(message):
+    global last_notification_time
+    current_time = time.time()
+    if (current_time - last_notification_time) < COOLDOWN_SECONDS:
+        return
+    
+    last_notification_time = current_time
+
+    # FIX: Use a Thread to send the notification.
+    # This ensures the notification doesn't get killed when the 
+    # main network event loop closes.
+    def run_in_thread():
+        asyncio.run(_async_send(message))
+
+    threading.Thread(target=run_in_thread, daemon=True).start()

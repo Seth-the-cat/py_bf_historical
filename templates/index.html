@@ -6,89 +6,79 @@
     <title>Blockfront historical</title>
     <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/master.css')}}"/>
     <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/index.css')}}"/>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <nav>
-        <div id="menu">
-            <h1>Blockfront Historical</h1>
-            <ul id="topinfo">
-                <li><strong>{{players_online}}</strong> players online</li>
-                <li onclick="location.reload()" style="cursor: pointer">Last updated: {{last_updated}} minutes ago</li>    
-                <li><a href="https://github.com/seth-the-cat/py_bf_historical">Github</a></li>
-            </ul>
-        </div>
-    </nav>
+    {% include 'nav.html' %}
     <main>
-    <div id="myplot"></div>
-<script type="module">
+        <div id="myplot"></div>
+        <script type="module">
 
-import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+        import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
 
-const data = {{raw_data | safe}};
+        const data = {{raw_data | safe}};
 
-const plot = Plot.plot({
-    color: {legend: true},
-    style: {
-        backgroundColor: "#000000",
-        color: "#ffffff",
-        overflow: "visible"
-    },
-    x: {
-        label: "Date",
-        grid: true
-    },
-    y: {
-        label: "Players Online",
-        grid: true
-    },
-    // Remove the global 'tip: true' to avoid conflicts
-    // tip: true, 
-    marks: [
-        // --- Your Existing Lines ---
-        Plot.lineY(data, {x: "Date", y: "Players", stroke: () => "Players", marker: "circle"}),
-        Plot.lineY(data, {x: "Date", y: "Dom", stroke: () => "Dom", marker: "circle"}),
-        Plot.lineY(data, {x: "Date", y: "TDM", stroke: () => "TDM", marker: "circle"}),
-        Plot.lineY(data, {x: "Date", y: "Inf", stroke: () => "Inf", marker: "circle"}),
-        Plot.lineY(data, {x: "Date", y: "GG", stroke: () => "GG", marker: "circle"}),
-        Plot.lineY(data, {x: "Date", y: "TTT", stroke: () => "TTT", marker: "circle"}),
-        Plot.lineY(data, {x: "Date", y: "Boot", stroke: () => "Boot", marker: "circle"}),
+        const plot = Plot.plot({
+            color: {legend: true},
+            style: {
+                backgroundColor: "#000000",
+                color: "#ffffff",
+                overflow: "visible"
+            },
+            x: {
+                label: "Date",
+                grid: true
+            },
+            y: {
+                label: "Players Online",
+                grid: true
+            },
+            // Remove the global 'tip: true' to avoid conflicts
+            // tip: true, 
+            marks: [
+                // --- Your Existing Lines ---
+                Plot.lineY(data, {x: "Date", y: "Players", stroke: () => "Players", marker: "circle"}),
+                Plot.lineY(data, {x: "Date", y: "Dom", stroke: () => "Dom", marker: "circle"}),
+                Plot.lineY(data, {x: "Date", y: "TDM", stroke: () => "TDM", marker: "circle"}),
+                Plot.lineY(data, {x: "Date", y: "Inf", stroke: () => "Inf", marker: "circle"}),
+                Plot.lineY(data, {x: "Date", y: "GG", stroke: () => "GG", marker: "circle"}),
+                Plot.lineY(data, {x: "Date", y: "TTT", stroke: () => "TTT", marker: "circle"}),
+                Plot.lineY(data, {x: "Date", y: "Boot", stroke: () => "Boot", marker: "circle"}),
 
-        // --- NEW: Interaction Layer ---
-        
-        // 1. Vertical Guide Line (Follows mouse)
-        Plot.ruleX(data, Plot.pointerX({
-            x: "Date", 
-            stroke: "white", 
-            strokeOpacity: 0.2
-        })),
+                // --- NEW: Interaction Layer ---
+                
+                // 1. Vertical Guide Line (Follows mouse)
+                Plot.ruleX(data, Plot.pointerX({
+                    x: "Date", 
+                    stroke: "white", 
+                    strokeOpacity: 0.2
+                })),
 
-        // 2. The Tooltip (aggregates all columns)
-        Plot.tip(data, Plot.pointerX({
-            x: "Date",
-            y: "Players", // Anchors the tooltip box to the 'Players' line height
-            fill: "black",      // Background color
-            stroke: "#feffff",  // Text color
-            strokeWidth: 1,     // Make text crisp
-            
-            // This function creates the text inside the tooltip
-            title: (d) => `Players online on ${d.Date}\n
-Total Players: ${d.Players}
-Domination: ${d.Dom}
-Team Death Match: ${d.TDM}
-Infected: ${d.Inf}
-Gun Game: ${d.GG}
-Terrorist in Tratior Town: ${d.TTT}
-Bootcamp: ${d.Boot}`
-        }),
-    )
-    ]
-})
+                // 2. The Tooltip (aggregates all columns)
+                Plot.tip(data, Plot.pointerX({
+                    x: "Date",
+                    y: "Players", // Anchors the tooltip box to the 'Players' line height
+                    fill: "black",      // Background color
+                    stroke: "#feffff",  // Text color
+                    strokeWidth: 1,     // Make text crisp
+                    
+                    // This function creates the text inside the tooltip
+                    title: (d) => `Players online on ${d.Date}\n
+        Total Players: ${d.Players}
+        Domination: ${d.Dom}
+        Team Death Match: ${d.TDM}
+        Infected: ${d.Inf}
+        Gun Game: ${d.GG}
+        Terrorist in Tratior Town: ${d.TTT}
+        Bootcamp: ${d.Boot}`
+                }),
+            )
+            ]
+        })
 
-const div = document.querySelector("#myplot");
-div.append(plot);
+        const div = document.querySelector("#myplot");
+        div.append(plot);
 
-</script>
-</main>
-</body>
+        </script>
+    </main>
+    </body>
 </html>

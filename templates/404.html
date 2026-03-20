@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page not found - Blockfront historical</title>
+    <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/master.css')}}"/>
+</head>
+<body>
+    {% include 'nav.html' %}
+    <main style="text-align: center;">
+        <h1>404 Page not found</h1>
+        <img src="{{url_for('static', filename='assets/404.gif')}}">
+        <p>If you think this is a mistake, please contact @seththecat on Discord.</p>
+        <h3><a href="{{url_for('index')}}">Home page</a></h3>
+        Search player match: <input onkeyup="if(event.key==='Enter'){location.href='/match/'+this.value};" type="text"></input>
+    </main>
+</body>
+</html>

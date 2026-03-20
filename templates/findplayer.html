@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockfront historical</title>
+    <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/master.css')}}"/>
+    <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/index.css')}}"/>
+</head>
+<body>
+    {% include 'nav.html' %}
+    <br><br><br>
+    <main style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+        <div>
+            Input username to view a player's stats over time: 
+            <input onkeyup="if(event.key==='Enter'){location.href='/player/'+this.value};" type="text">
+        </div>
+    
+        <style>
+            .player-grid {
+                display: grid;
+                /* This creates the tiles! */
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                gap: 15px;
+                padding: 20px;
+                /* ADD THESE TWO LINES */
+                width: 100%; 
+                max-width: 1200px; 
+            }
+            .player-card {
+                background: #000000;
+                padding: 10px;
+                border-radius: 5px;
+                text-align: center;
+                border: 1px solid #ffffff;
+                transition: background-color 0.3s ease;
+                color: #efefef;
+                text-decoration: none;
+            }
+            .player-card:hover {
+                background-color: #ffffff;
+                color: #000000; /* Forces text to black when background turns white */
+                cursor: pointer;
+            }
+        </style>
+
+        <div class="player-grid">
+            {% for player in players %}
+                <button class="player-card" onclick="location.href='/player/{{ player.name }}'">{{player.name}}</button>
+            {% endfor %}
+        </div>
+    </main>
+    </body>
+</html>

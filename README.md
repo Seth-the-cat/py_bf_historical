@@ -1,9 +1,6 @@
 # Blockfront Historical
 Website for viewing Blockfront stats overtime. This utilzes vuis's API for interacting with blockfronts internal API.
 
-## Contributors
-@Seth-the-cat, @xeovis
-
 ## TODO
 Main goals:
 - [x] Fetch cloud stats and graph
@@ -25,7 +22,18 @@ Main goals:
 - [ ] Create table for session stats
 - [ ] Create service to fetch session stats
 - [ ] Make page with session stats
+- [ ] Discord bot that sends session stats
 
 ### Maybe Overlay / match stats grabber
-Like a bedwars overlay but for blockfront.
-Will need to see how laggy or slow this is.
+> [!NOTE]
+> Like a bedwars overlay but for blockfront.
+
+> [!WARNING]
+> Parial implementation currently.
+
+You can search for a player (i.e yourself), then it pulls up the match players with some stats.
+
+### QOL
+- [ ] Redo graphs to d3.js
+- [ ] Create proper db structure
+- [ ] Logo / Favicon

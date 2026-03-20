@@ -1,0 +1,393 @@
+import contextlib
+import logging
+from pathlib import Path
+import sqlite3
+import os
+import json
+import utils.network as network
+
+
+DATA_DIR = Path("./data")
+# Ensure the 'data' directory exists before we try to connect
+os.makedirs(DATA_DIR,exist_ok=True)
+logger = logging.getLogger(__name__)
+
+DB_FILE = os.path.join(DATA_DIR, 'stats.db')
+
+
+def create_connection(db_file=DB_FILE):
+    """ create a database connection to the SQLite database """
+    conn = None
+    try:
+        conn = sqlite3.connect(db_file)
+    except sqlite3.Error as e:
+        logger.error(f"Error connecting to database at {db_file}: {e}")
+        return None
+
+    # check if table exists, if not create it
+    try:
+        cur = conn.cursor()
+        if cur.execute("PRAGMA foreign_keys;") == 0:
+            cur.execute("PRAGMA foreign_keys = ON;")
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cloud_stats';")
+        if cur.fetchone() is None:
+            logger.warning("Table 'cloud_stats' not found. Creating it...")
+            cur.execute("CREATE TABLE cloud_stats (id integer PRIMARY KEY, date DATETIME DEFAULT CURRENT_TIMESTAMP, players_online integer, players_in_dom integer, players_in_tdm integer, players_in_inf integer, players_in_gg integer, players_in_ttt integer, players_in_boot integer)")
+            conn.commit()
+        if cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='players';").fetchone() is None:
+            logger.warning("Table 'players' not found. Creating it...")
+            cur.execute("CREATE TABLE players (id integer PRIMARY KEY, uuid text UNIQUE, name text UNIQUE)")
+            conn.commit()
+        if cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='player_stats';").fetchone() is None:
+            logger.warning("Table 'player_stats' not found. Creating it...")
+            create_table_sql = """
+                                CREATE TABLE IF NOT EXISTS player_stats (
+                                    stat_id INTEGER PRIMARY KEY,
+                                    player_id INTEGER,
+                                    date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                    kills INTEGER ,
+                                    assists INTEGER ,
+                                    deaths INTEGER ,
+                                    kdr REAL GENERATED ALWAYS AS (CAST(kills AS REAL) / NULLIF(deaths, 0)) VIRTUAL,
+                                    headshots INTEGER ,
+                                    hskr REAL GENERATED ALWAYS AS (CAST(headshots AS REAL) / NULLIF(kills, 0)) VIRTUAL,
+                                    backstabs INTEGER ,
+                                    no_scopes INTEGER ,
+                                    first_bloods INTEGER ,
+                                    fire_kills INTEGER ,
+                                    bot_kills INTEGER ,
+                                    infected_kills INTEGER ,
+                                    infected_rounds_won INTEGER ,
+                                    infected_matches_won INTEGER ,
+                                    vehicle_kills INTEGER ,
+                                    highest_kill_streak INTEGER ,
+                                    highest_death_streak INTEGER ,
+                                    exp INTEGER ,
+                                    prestige INTEGER ,
+                                    rifle_xp INTEGER ,
+                                    lt_rifle_xp INTEGER ,
+                                    assault_xp INTEGER ,
+                                    support_xp INTEGER ,
+                                    medic_xp INTEGER ,
+                                    sniper_xp INTEGER ,
+                                    gunner_xp INTEGER ,
+                                    anti_tank_xp INTEGER ,
+                                    commander_xp INTEGER , 
+                                    match_karma INTEGER ,
+                                    total_games INTEGER ,
+                                    match_wins INTEGER ,
+                                    time_played INTEGER , 
+                                    FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE
+                                );
+                                """
+            cur.execute(create_table_sql)
+            conn.commit()
+    except sqlite3.Error as e:
+        logger.error(f"Error creating table: {e}")
+
+    return conn
+
+@contextlib.contextmanager
+def get_cursor():
+    connection = create_connection()
+    try:
+        connection.row_factory = sqlite3.Row 
+        cursor = connection.cursor()
+        yield cursor
+        connection.commit()
+    except Exception:
+        if connection:
+            connection.rollback()
+        raise
+    finally:
+        if connection:
+            connection.close()
+
+def add_cloud_stats(stats):
+    """ Create a new stats entry into the stats table """
+    with get_cursor() as cur:
+        sql = ''' INSERT INTO cloud_stats(players_online, players_in_dom, players_in_tdm, players_in_inf, players_in_gg, players_in_ttt, players_in_boot)
+                VALUES(?,?,?,?,?,?,?) '''
+        cur.execute(sql, stats)
+        last_id = cur.lastrowid
+        return last_id
+
+def add_player(username):
+    """ Create a new player entry into the players table """
+    try:
+        result = network.get_request("/api/v1/player_data",params={"name": username})
+    except Exception as e:
+        raise ValueError(f"Invalid username: '{username}'")
+    uuid = result["uuid"]
+    with get_cursor() as cur:
+        sql = ''' INSERT INTO players(uuid, name)
+                VALUES(?, ?) '''
+        cur.execute(sql, (uuid, username))
+        last_id = cur.lastrowid
+        return last_id
+
+def add_player_stats(player_id, stats):
+    """ Create a new stats entry into the stats table """
+    if not player_id:
+        raise ValueError(f"Invalid player_id: {player_id}")
+
+    # Helper function to ensure every stat is strictly an integer.
+    # This prevents the string "100" from failing to match the integer 100.
+    def get_int(key):
+        try:
+            return int(stats.get(key, 0))
+        except (ValueError, TypeError):
+            return 0
+
+    kills = get_int('kills')
+    assists = get_int('assists')
+    deaths = get_int('deaths')
+    headshots = get_int('headshots')
+    backstabs = get_int('backstabs')
+    no_scopes = get_int('no_scopes')
+    first_bloods = get_int('first_bloods')
+    fire_kills = get_int('fire_kills')
+    bot_kills = get_int('bot_kills')
+    infected_kills = get_int('infected_kills')
+    infected_rounds_won = get_int('infected_rounds_won')
+    infected_matches_won = get_int('infected_matches_won')
+    vehicle_kills = get_int('vehicle_kills')
+    highest_kill_streak = get_int('highest_kill_streak')
+    highest_death_streak = get_int('highest_death_streak')
+    exp = get_int('exp')
+    prestige = get_int('prestige')
+    rifle_xp = get_int('rifle_xp')
+    lt_rifle_xp = get_int('lt_rifle_xp')
+    assault_xp = get_int('assault_xp')
+    support_xp = get_int('support_xp')
+    medic_xp = get_int('medic_xp')
+    sniper_xp = get_int('sniper_xp')
+    gunner_xp = get_int('gunner_xp')
+    anti_tank_xp = get_int('anti_tank_xp')
+    commander_xp = get_int('commander_xp')
+    match_karma = get_int('match_karma')
+    total_games = get_int('total_games')
+    match_wins = get_int('match_wins')
+    time_played = get_int('time_played')
+
+    stat_values = (
+        kills, assists, deaths, headshots, backstabs, no_scopes, 
+        first_bloods, fire_kills, bot_kills, infected_kills, 
+        infected_rounds_won, infected_matches_won, vehicle_kills, 
+        highest_kill_streak, highest_death_streak, exp, prestige, 
+        rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, 
+        sniper_xp, gunner_xp, anti_tank_xp, commander_xp, 
+        match_karma, total_games, match_wins, time_played
+    )
+
+    with get_cursor() as cur:
+        cur.execute('''
+            SELECT stat_id, kills, assists, deaths, headshots, backstabs, no_scopes, 
+                   first_bloods, fire_kills, bot_kills, infected_kills, 
+                   infected_rounds_won, infected_matches_won, vehicle_kills, 
+                   highest_kill_streak, highest_death_streak, exp, prestige, 
+                   rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, 
+                   sniper_xp, gunner_xp, anti_tank_xp, commander_xp, 
+                   match_karma, total_games, match_wins, time_played
+            FROM player_stats
+            WHERE player_id = ?
+            ORDER BY stat_id DESC LIMIT 2
+        ''', (player_id,))
+        
+        last_two = cur.fetchall()
+
+        if len(last_two) == 2:
+            last_row_stats = tuple(last_two[0])[1:] 
+            prev_row_stats = tuple(last_two[1])[1:]
+
+            if stat_values == last_row_stats and stat_values == prev_row_stats:
+                # Streak continuing! Delete the middle entry.
+                cur.execute('DELETE FROM player_stats WHERE stat_id = ?', (last_two[0]['stat_id'],))
+
+        sql = ''' INSERT INTO player_stats(
+                    player_id, kills, assists, deaths, headshots, backstabs, no_scopes, 
+                    first_bloods, fire_kills, bot_kills, infected_kills, infected_rounds_won, 
+                    infected_matches_won, vehicle_kills, highest_kill_streak, highest_death_streak, 
+                    exp, prestige, rifle_xp, lt_rifle_xp, assault_xp, support_xp, medic_xp, 
+                    sniper_xp, gunner_xp, anti_tank_xp, commander_xp, match_karma, total_games, 
+                    match_wins, time_played
+                  ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) '''
+        
+        cur.execute(sql, (player_id,) + stat_values)
+        
+        return cur.lastrowid
+    
+
+def get_players_uuids():
+    """ Query all rows in the players table """
+    with get_cursor() as cur:
+        cur.execute("SELECT uuid FROM players")
+        rows = cur.fetchall()
+        return rows
+    
+def get_players_names():
+    """ Query all rows in the players table """
+    with get_cursor() as cur:
+        cur.execute("SELECT name FROM players")
+        rows = cur.fetchall()
+        return rows
+
+def get_player_id_by_uuid(uuid):
+    """Return the `id` of a player given their UUID, or None if not found."""
+    with get_cursor() as cur:
+        cur.execute("SELECT id FROM players WHERE uuid = ?", (uuid,))
+        row = cur.fetchone()
+        return row[0] if row else None
+    
+def get_player_id_by_name(name):
+    """Return the `id` of a player given their name, or None if not found."""
+    with get_cursor() as cur:
+        cur.execute("SELECT id FROM players WHERE name COLLATE NOCASE = ?", (name,))
+        row = cur.fetchone()
+        return row[0] if row else None
+
+def get_player_stats(player_id):
+    """ Query all rows in the stats table """
+    with get_cursor() as cur:
+        cur.execute("SELECT * FROM player_stats WHERE player_id=?", (player_id,))
+        rows = cur.fetchall()
+        logger.debug(rows)
+        return rows
+
+def check_player(name):
+    """ Query all rows in the players table """
+    with get_cursor() as cur:
+        cur.execute("SELECT * FROM players WHERE name COLLATE NOCASE = ?", (name,))
+        rows = cur.fetchall()
+        if len(rows) > 0:
+            return True
+        else:
+            return False
+
+def get_all_stats():
+    """ Query all rows in the stats table """
+    with get_cursor() as cur:
+        cur.execute("SELECT * FROM cloud_stats")
+        rows = cur.fetchall()
+        return rows
+
+def get_latest_stats():
+    """ Query the latest row in the stats table """
+    with get_cursor() as cur:
+        cur.execute("SELECT * FROM cloud_stats ORDER BY id DESC LIMIT 1")
+        row = cur.fetchone()
+        return row
+
+def two_cols_of_stats():
+    """ Query date and players_online columns from stats table """
+    with get_cursor() as cur:
+        cur.execute("SELECT date, players_online FROM cloud_stats")
+        rows = cur.fetchall()
+        formatted_entries = []
+        for date_str, players in rows:
+            formatted_entries.append(f'  {{Date: new Date("{date_str}"), Players: {players}}}')
+
+        output = "[\n" + ",\n".join(formatted_entries) + "\n]" 
+        return output
+
+def graph_data():   
+    """ Query date and players_online columns from cloud_stats table """
+    with get_cursor() as cur:
+        cur.execute("SELECT date, players_online, players_in_dom, players_in_tdm, players_in_inf, players_in_gg, players_in_ttt, players_in_boot FROM cloud_stats")
+        rows = cur.fetchall()
+        
+    formatted_entries = []
+    for date_str, players_online, players_in_dom, players_in_tdm, players_in_inf, players_in_gg, players_in_ttt, players_in_boot in rows:
+        formatted_entries.append(f'  {{Date: new Date("{date_str}"), Players: {players_online}, Dom: {players_in_dom}, TDM: {players_in_tdm}, Inf: {players_in_inf}, GG: {players_in_gg}, TTT: {players_in_ttt}, Boot: {players_in_boot}}}')
+
+    output = "[\n" + ",\n".join(formatted_entries) + "\n]" 
+    return output
+
+def player_graph_data(player_id):   
+    """ Query date and select columns from player_stats table for graphing """
+    with get_cursor() as cur:
+        cur.execute("""
+            SELECT date, kills, deaths, assists, headshots, match_wins, total_games 
+            FROM player_stats 
+            WHERE player_id = ? 
+            ORDER BY date ASC
+        """, (player_id,))
+        rows = cur.fetchall()
+        
+    formatted_entries = []
+    for row in rows:
+        date_str, kills, deaths, assists, headshots, match_wins, total_games = row
+        formatted_entries.append(
+            f'  {{Date: "{date_str}", Kills: {kills}, Deaths: {deaths}, '
+            f'Assists: {assists}, Headshots: {headshots}, Wins: {match_wins}, Games: {total_games}}}'
+        )
+
+    output = "[\n" + ",\n".join(formatted_entries) + "\n]" 
+    return output
+
+def clear_cloud_stats():
+    """ Delete all rows in the stats table """
+    with get_cursor() as cur:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM cloud_stats")
+
+def update_player_name(player_uuid, player_name):
+    """Updates the player's name using the exact 36-char dashed UUID."""
+    if not player_uuid or not player_name:
+        return
+
+    # Keep the UUID exactly as provided (dashed, 36 chars)
+    clean_uuid = str(player_uuid).strip().lower()
+    clean_name = str(player_name).strip()
+
+    with get_cursor() as cur:
+        cur.execute('''
+            UPDATE players 
+            SET name = ? 
+            WHERE LOWER(uuid) = ?
+        ''', (clean_name, clean_uuid))
+        cur.connection.commit() # Ensure the change is saved!
+# Runable functions for testing/debugging
+if __name__ == '__main__':
+    logger.info(f"Database Path: {DB_FILE}")
+    logger.info("Runable functions:\n1. Create Connection\n2. add_stats(stats_tuple)\n3. get_all_stats()\n4. get_latest_stats()\n5. two_cols_of_stats()\n6. clear_stats()")
+    choice = input("Enter the number of the function you want to run: ")
+    
+    if choice == "1":
+        conn = create_connection()
+        if conn:
+            logger.info("Connection to database established.")
+            conn.close()
+        else:
+            logger.error("Failed to establish connection.")
+            
+    elif choice == "2":
+        print("Enter stats as comma-separated values (date, players_online, players_in_dom, players_in_tdm, players_in_inf, players_in_gg, players_in_ttt, players_in_boot):")
+        stats_input = input()
+        # Basic error handling for manual input
+        try:
+            stats_tuple = tuple(stats_input.split(","))
+            add_cloud_stats(stats_tuple)
+            print("Stats added.")
+        except Exception as e:
+            print(f"Error adding stats: {e}")
+            
+    elif choice == "3":
+        print("All stats:")
+        for row in get_all_stats():
+            print(row)
+            
+    elif choice == "4":
+        print("Latest stats:")
+        print(get_latest_stats())
+        
+    elif choice == "5":
+        print("Two columns of stats:")
+        print(two_cols_of_stats())
+        
+    elif choice == "6": 
+        clear_cloud_stats()
+        print("All stats cleared.")
+        
+    else:
+        print("Invalid choice.")

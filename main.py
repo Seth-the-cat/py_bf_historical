@@ -1,31 +1,109 @@
-from flask import Flask, render_template
+import atexit
+import logging
+from flask import Flask, render_template, request
 from fetchStats import fetchStats
-import sqlUtils
-from minutesSince import minutesSince
+import utils.sql as sql
+import utils.html
+import utils.matrixbot as matrixbot
+import bleach
+from apscheduler.schedulers.background import BackgroundScheduler
+
+    
+logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 app = Flask(__name__)
+
+app.logger.setLevel(logging.INFO)
+sched = BackgroundScheduler()
+
+
+def start_scheduler():
+    sched.add_job(fetchStats, 'interval', minutes=10)
+
+    print("Worker started. Running initial fetch...")
+    try:
+        fetchStats()
+        print("Done!!")
+    except Exception as e:
+        print(f"Error in initial fetch: {e}")
+    sched.start()
+    print("Scheduler started. Will fetch stats every 10 minutes.")
+    atexit.register(lambda: sched.shutdown())
+
+@app.context_processor
+def inject_global_stats():
+    try:
+        latest_stats = sql.get_latest_stats()
+        players_online = latest_stats[2]
+        last_updated = latest_stats[1]
+    except Exception as e:
+        players_online = "N/A"
+        last_updated = "N/A"
+    return dict(players_online=players_online, last_updated=last_updated)
 
 @app.route("/")
 def index():
     try:
-        latest_stats = sqlUtils.get_latest_stats()
-        players_online = latest_stats[2]
-        last_updated = minutesSince(latest_stats[1])
-        raw_data = sqlUtils.graph_data()
+        raw_data = sql.graph_data()
     except TypeError:
         fetchStats()
-        latest_stats = sqlUtils.get_latest_stats()
-        players_online = latest_stats[2]
-        last_updated = minutesSince(latest_stats[1])
-        raw_data = sqlUtils.graph_data()
+        raw_data = sql.graph_data()
     except Exception as e:
         return f"<p>Error retrieving stats: {e}</p>"
     return render_template('index.html',
-    players_online=players_online,
-    last_updated=last_updated,
     raw_data=raw_data
     )
 
+@app.route("/addplayer")
+def add_player():
+    return render_template('addplayer.html')
+
+# Show players over time data
+@app.route("/playersOverTime")
+def players_over_time():
+    return sql.two_cols_of_stats()
+
+@app.route('/api/addplayer', methods=['POST'])
+def track_player():
+    app.logger.info("Trying to add new player")
+    if request.method == 'POST':
+        username = request.form.get('username')
+        try:
+            sql.add_player(bleach.clean(username))
+        except ValueError:
+            return "Bad Request" , 400
+        return "OK", 200
+
+@app.route('/player/<username>')
+def check_if_tracking(username):
+    app.logger.debug(sql.check_player(username))
+    if sql.check_player(username):
+        test = sql.get_player_id_by_name(username)
+        app.logger.info(f"Player_id: {test}")
+        app.logger.debug(sql.player_graph_data(test))
+        return render_template('player.html', response=utils.html.gen_html_table_from_player_stats(sql.get_player_stats(test)), raw_data=sql.player_graph_data(test))
+    else:
+        return render_template('player.html', response=f"<i>{username}</i>'s stats are not being tracked. <br> <a href='/addplayer'>Click here to add them.</a>")
+
+@app.route('/findplayer')
+def find_player():
+    # print(sql.get_players_names())
+    return render_template('findplayer.html', players=sql.get_players_names())
+
+@app.errorhandler(404)
+def not_found(e):
+    return render_template("404.html")
+
+start_scheduler()
+
 if __name__ == '__main__':
     # You can keep this specifically for local testing if you want
-    app.run(debug=True, use_reloader=False)
+    logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+    app.run(debug=True, use_reloader=True)

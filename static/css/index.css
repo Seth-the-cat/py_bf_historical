@@ -3,3 +3,12 @@ main {
     justify-content: center;
     align-items: center;
 }
+
+#last_update {
+    cursor: help;
+}
+
+h1 {
+    padding: 0;
+    margin: 0;
+}
