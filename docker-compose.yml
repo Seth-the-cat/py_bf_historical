@@ -12,17 +12,6 @@ services:
     networks:
       - bf_shared_net
 
-  worker:
-    build: .
-    command: python clock.py
-    env_file:
-      - .env
-    volumes:
-      - ./data:/app/data
-    restart: always
-    networks:
-      - bf_shared_net
-
 networks:
   bf_shared_net:
     external: true

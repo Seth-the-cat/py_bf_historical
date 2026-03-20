@@ -1,3 +1,4 @@
+import atexit
 import logging
 from flask import Flask, render_template, request
 from fetchStats import fetchStats, fetchMatchStats
@@ -5,8 +6,32 @@ import utils.sql as sql
 import utils.html
 import utils.matrixbot as matrixbot
 import bleach
+from apscheduler.schedulers.background import BackgroundScheduler
+
+    
+logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 app = Flask(__name__)
+
+app.logger.setLevel(logging.INFO)
+sched = BackgroundScheduler()
+
+
+def start_scheduler():
+    sched.add_job(fetchStats, 'interval', minutes=10)
+
+    print("Worker started. Running initial fetch...")
+    try:
+        fetchStats()
+        print("Done!!")
+    except Exception as e:
+        print(f"Error in initial fetch: {e}")
+    sched.start()
+    print("Scheduler started. Will fetch stats every 10 minutes.")
+    atexit.register(lambda: sched.shutdown())
 
 @app.context_processor
 def inject_global_stats():
@@ -93,12 +118,13 @@ def find_player():
 def not_found(e):
     return render_template("404.html")
 
+start_scheduler()
+
 if __name__ == '__main__':
     # You can keep this specifically for local testing if you want
-    app.logger.setLevel(logging.DEBUG)
-    
     logging.basicConfig(
             level=logging.DEBUG,
             format='%(asctime)s - %(levelname)s - %(message)s'
-        )
+)
+
     app.run(debug=True, use_reloader=True)

@@ -92,7 +92,7 @@ async def async_get_request(endpoint:str,params: Optional[Dict[str, Any]] = None
 def get_request(endpoint:str,params: Optional[Dict[str, Any]] = None,baseurl=BASE_BLOCKFRONT_URL,timeout: float = 15.0):
     '''Syncronous Wrapper for async function'''
     output = asyncio.run(async_get_request(endpoint,params,baseurl=baseurl,timeout=timeout))
-    logger.info("error or smth", output)
+    logger.info(f"error or smth: {output}" )
     if output == '{"error":"cloud_disconnected"}':
         error_msg = f"Received 'cloud_disconnected' response for endpoint {endpoint}"
         logger.warning(error_msg)
