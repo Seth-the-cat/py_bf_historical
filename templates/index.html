@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark">
     <title>Blockfront historical</title>
-    <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/master.css')}}"/>
-    <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/index.css')}}"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
 </head>
-<body>
+<body class="bg-olive-300 dark:bg-olive-900">
     {% include 'nav.html' %}
-    <main>
+    <main class="object-center">
+        <h1 class="relative text-2xl text-fuchsia-700 dark:text-fuchsia-300">Player activity</h1>
         <div id="myplot"></div>
         <script type="module">
 

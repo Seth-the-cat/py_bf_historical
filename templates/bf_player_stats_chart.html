@@ -1,26 +1,29 @@
-<div style="width:90%;box-sizing:border-box;">
+<div class="w-[90%] box-border mx-auto">
 
-<div style="display:flex;gap:0;margin-bottom:1rem;border-bottom:1px solid #333;">
-  <button onclick="setTab('combat')"      id="tab-combat"      class="tab-btn active-tab">Combat</button>
-  <button onclick="setTab('infected')"    id="tab-infected"    class="tab-btn">Infected</button>
-  <button onclick="setTab('progression')" id="tab-progression" class="tab-btn">Progression</button>
-  <button onclick="setTab('general')"     id="tab-general"     class="tab-btn">General</button>
-</div>
+  <div class="flex gap-0 mb-4 border-b border-gray-300 dark:border-gray-700">
+    <button onclick="setTab('combat')" id="tab-combat" class="tab-btn px-4 py-2 border-b-2 text-sm font-medium transition-colors text-blue-600 border-blue-600 dark:text-blue-500 dark:border-blue-500">Combat</button>
+    <button onclick="setTab('infected')" id="tab-infected" class="tab-btn px-4 py-2 border-b-2 text-sm font-medium transition-colors text-gray-500 border-transparent hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">Infected</button>
+    <button onclick="setTab('progression')" id="tab-progression" class="tab-btn px-4 py-2 border-b-2 text-sm font-medium transition-colors text-gray-500 border-transparent hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">Progression</button>
+    <button onclick="setTab('general')" id="tab-general" class="tab-btn px-4 py-2 border-b-2 text-sm font-medium transition-colors text-gray-500 border-transparent hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">General</button>
+  </div>
 
-<div id="legend" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0.75rem;"></div>
+  <div id="legend" class="flex flex-wrap gap-1.5 mb-3"></div>
 
-<div style="display:flex;gap:6px;margin-bottom:0.75rem;align-items:center;flex-wrap:wrap;">
-  <span style="font-size:12px;color:#888;">Range:</span>
-  <button onclick="setRange(7)"    id="r7"   class="range-btn">7d</button>
-  <button onclick="setRange(30)"   id="r30"  class="range-btn">30d</button>
-  <button onclick="setRange(90)"   id="r90"  class="range-btn">90d</button>
-  <button onclick="setRange(null)" id="rAll" class="range-btn range-active">All</button>
-  <button onclick="toggleMode()" id="mode-btn" class="range-btn" style="margin-left:8px;">Showing: Growth</button>
-  <span style="font-size:11px;color:#555;margin-left:auto;">scroll to zoom · drag to pan · dbl-click to reset</span>
-</div>
+  <div class="flex gap-1.5 mb-3 items-center flex-wrap">
+    <span class="text-xs text-gray-500 dark:text-gray-400">Range:</span>
+    <button onclick="setRange(7)" id="r7" class="range-btn px-2 py-1 text-xs rounded border transition-colors border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">7d</button>
+    <button onclick="setRange(30)" id="r30" class="range-btn px-2 py-1 text-xs rounded border transition-colors border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">30d</button>
+    <button onclick="setRange(90)" id="r90" class="range-btn px-2 py-1 text-xs rounded border transition-colors border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">90d</button>
+    <button onclick="setRange(null)" id="rAll" class="range-btn px-2 py-1 text-xs rounded border transition-colors border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-white dark:border-blue-500">All</button>
+    
+    <button onclick="toggleMode()" id="mode-btn" class="range-btn ml-2 px-2 py-1 text-xs rounded border transition-colors border-gray-300 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">Showing: Growth</button>
+    
+    <span class="text-[11px] text-gray-500 dark:text-gray-400 ml-auto">scroll to zoom · drag to pan · dbl-click to reset</span>
+  </div>
 
-<div id="myplot" style="position:relative;width:100%;"></div>
-<div id="tooltip" ></div>
+  <div id="myplot" class="relative w-full"></div>
+  
+  <div id="tooltip" class="absolute hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 pointer-events-none z-10 shadow-xl max-w-sm"></div>
 
 </div>
 
@@ -80,17 +83,40 @@ function getVal(d, k) { return showDelta ? d['_delta_' + k] : d['_total_' + k]; 
 
 function setTab(tab) {
   currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-  document.getElementById('tab-' + tab).classList.add('active-tab');
+  
+  // Reset all tabs to inactive Tailwind classes
+  document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('text-blue-600', 'border-blue-600', 'dark:text-blue-500', 'dark:border-blue-500');
+      b.classList.add('text-gray-500', 'border-transparent', 'dark:text-gray-400');
+  });
+  
+  // Set the clicked tab to active Tailwind classes
+  const activeTab = document.getElementById('tab-' + tab);
+  activeTab.classList.remove('text-gray-500', 'border-transparent', 'dark:text-gray-400');
+  activeTab.classList.add('text-blue-600', 'border-blue-600', 'dark:text-blue-500', 'dark:border-blue-500');
+  
   buildLegend();
   renderChart();
 }
 
 function setRange(days) {
   currentRange = days;
-  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('range-active'));
+  
+  // Reset all range buttons to inactive Tailwind classes
+  document.querySelectorAll('.range-btn').forEach(b => {
+      // Exclude the mode toggle button from the reset
+      if(b.id !== 'mode-btn') {
+          b.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700', 'dark:bg-blue-500/10', 'dark:text-white');
+          b.classList.add('border-gray-300', 'text-gray-600', 'dark:border-gray-700', 'dark:text-gray-400');
+      }
+  });
+  
+  // Set the clicked range button to active Tailwind classes
   const map = { 7:'r7', 30:'r30', 90:'r90', null:'rAll' };
-  document.getElementById(map[days]).classList.add('range-active');
+  const activeBtn = document.getElementById(map[days]);
+  activeBtn.classList.remove('border-gray-300', 'text-gray-600', 'dark:border-gray-700', 'dark:text-gray-400');
+  activeBtn.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-700', 'dark:bg-blue-500/10', 'dark:text-white');
+  
   renderChart();
 }
 
@@ -107,12 +133,19 @@ function buildLegend() {
   stats.forEach(k => {
     const active = activeKeys[currentTab].has(k);
     const btn = document.createElement('button');
-    btn.className = 'stat-toggle';
-    btn.style.borderColor = active ? colorMap[k] : '#333';
+    
+    // Use base Tailwind utility classes for the button structure
+    btn.className = 'flex items-center gap-1.5 px-2 py-1 text-xs border rounded transition-colors';
+    
+    // We dynamically apply the unique graph colors via inline styles
+    btn.style.borderColor = active ? colorMap[k] : 'var(--tw-border-opacity, #4b5563)'; 
     btn.style.background  = active ? colorMap[k] + '22' : 'transparent';
-    btn.style.color       = active ? colorMap[k] : '#555';
+    btn.style.color       = active ? colorMap[k] : 'var(--tw-text-opacity, #9ca3af)';
+
     const dot = document.createElement('span');
-    dot.style.cssText = `width:7px;height:7px;border-radius:50%;background:${active ? colorMap[k] : '#444'};flex-shrink:0;`;
+    dot.className = 'w-[7px] h-[7px] rounded-full shrink-0';
+    dot.style.background = active ? colorMap[k] : '#4b5563';
+    
     btn.appendChild(dot);
     btn.appendChild(document.createTextNode(k));
     btn.onclick = () => {
@@ -133,7 +166,7 @@ function renderChart() {
   container.innerHTML = '';
 
   if (!raw || raw.length === 0) {
-    container.innerHTML = '<p style="color:#666;text-align:center;padding:2rem;">No data available.</p>';
+    container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center p-8">No data available.</p>';
     return;
   }
 
@@ -153,7 +186,10 @@ function renderChart() {
   const totalW = container.clientWidth || 900;
   const W = totalW - margin.left - margin.right;
   const H = 300 - margin.top - margin.bottom;
-  const axisColor = '#444', gridColor = '#1e1e1e', textColor = '#666';
+  
+  // Note: These colors map to the D3 Canvas rendering. You can swap these out for 
+  // CSS variables if you want the D3 lines to perfectly switch on dark/light mode toggle.
+  const axisColor = '#4b5563', gridColor = '#374151', textColor = '#9ca3af';
 
   const x = d3.scaleTime().domain([startDate, maxDate]).range([0, W]);
   const yMax = d3.max(visData, d => Math.max(...activeArr.map(k => getVal(d,k) || 0)));
@@ -200,7 +236,7 @@ function renderChart() {
 
   const focusG = svg.append('g').style('display','none');
   focusG.append('line').attr('y1',0).attr('y2',H)
-    .attr('stroke','#555').attr('stroke-width',1).attr('stroke-dasharray','3,2');
+    .attr('stroke','#6b7280').attr('stroke-width',1).attr('stroke-dasharray','3,2');
   const circles = focusG.selectAll('circle').data(activeArr).enter().append('circle')
     .attr('r', 4).attr('fill', k => colorMap[k]).attr('stroke','#111').attr('stroke-width',1.5);
 
@@ -243,15 +279,20 @@ function renderChart() {
       if (!d) return;
       focusG.attr('transform', `translate(${currX(d.date)},0)`);
       circles.attr('cy', k => y(d[k]||0));
+      
+      // Converted tooltip innerHTML to use Tailwind utilities
       tooltip.innerHTML =
-        `<div style="color:#aaa;font-size:10px;margin-bottom:5px;">${d.date.toLocaleDateString()}</div>` +
+        `<div class="text-gray-500 dark:text-gray-400 text-[10px] mb-1.5 font-medium">${d.date.toLocaleDateString()}</div>` +
         activeArr.map(k =>
-          `<div style="display:flex;justify-content:space-between;gap:16px;">
-            <span style="color:${colorMap[k]};">● ${k}</span>
-            <span style="color:#ccc;">${(d['_total_'+k]||0).toLocaleString()} <span style="color:#555;">(+${(d[k]||0).toLocaleString()})</span></span>
-            <span style="color:#ccc;">${(d['_total_'+k]||0).toLocaleString()} <span style="color:#555;">(+${(d['_delta_'+k]||0).toLocaleString()})</span></span>
+          `<div class="flex justify-between items-center gap-6 mb-1 text-sm">
+            <span class="font-semibold" style="color:${colorMap[k]};">● ${k}</span>
+            <div class="text-right text-gray-800 dark:text-gray-200">
+                ${(d['_total_'+k]||0).toLocaleString()} 
+                <span class="text-gray-500 text-xs ml-1">(+${showDelta ? (d['_delta_'+k]||0).toLocaleString() : (d[k]||0).toLocaleString()})</span>
+            </div>
           </div>`
         ).join('');
+        
         const ttW = tooltip.offsetWidth || 180;
         const ttH = tooltip.offsetHeight || 120;
         const left = event.clientX + 16 + ttW > window.innerWidth  ? event.clientX - ttW - 8 : event.clientX + 16;

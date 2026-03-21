@@ -15,6 +15,7 @@ pkgs.mkShell {
         pkgs.python3Packages.aiohttp
         pkgs.python3Packages.matrix-nio
         pkgs.sqlite
+        pkgs.nodejs
     ];
 
     shellHook = ''

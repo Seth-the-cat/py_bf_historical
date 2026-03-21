@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BF historical - {name}</title>
-    <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/master.css')}}"/>
-    <link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/index.css')}}"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
 </head>
-<body>
+<body class="bg-olive-300 dark:bg-olive-900">
     {% include 'nav.html' %}
-    <h1 style="text-align: center; margin-top: 20px; flex: 1;">Stats for <span style="color: lightslategrey">{{name}}'s Stats</span></h1>
     <main style="width: 100%; padding: 0 1rem; box-sizing: border-box; flex: auto;">
+        <h1>Stats for <span class="text-fuchsia-700 dark:text-fuchsia-300">{{name}}'s Stats</span></h1>
         {% include 'bf_player_stats_chart.html' %}
     </main>
 </body>

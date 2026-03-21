@@ -1,0 +1,25 @@
+{
+  "name": "py_bf_historical",
+  "version": "1.0.0",
+  "description": "Website for viewing Blockfront stats overtime. This utilzes vuis's API for interacting with blockfronts internal API.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seth-the-cat/py_bf_historical.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/seth-the-cat/py_bf_historical/issues"
+  },
+  "homepage": "https://github.com/seth-the-cat/py_bf_historical#readme",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.2",
+    "tailwindcss": "^4.2.2"
+  }
+}
