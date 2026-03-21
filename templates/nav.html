@@ -5,21 +5,19 @@
                 <li><strong>{{players_online}}</strong> players online</li>
                 <li id="last_update" title="Stats are fetched every 10 minutes"></li>
                 <li><a href="{{url_for('find_player')}}">Player Stats</a></li>
-                <li><a href="{{url_for('find_match')}}">Match Stats</a></li>   
+                <li><a href="{{url_for('compare')}}">Compare Players</a></li>
                 <li><a href="https://github.com/seth-the-cat/py_bf_historical">Github</a></li>
+                <li><a onclick="">Toggle Dark Mode</a></li>
             </ul>
             <script>
                 const lastUpdated = new Date("{{last_updated}}Z");
                 function updateLastUpdated() {
                     const now = new Date();
-                    console.log("Last updated:", lastUpdated);
-                    console.log("Current time:", now);
                     // This ensures diffMs is at least 0, even if the user's clock is ahead
                     const diffMs = Math.max(0, now - lastUpdated); 
 
                     const diffMins = Math.floor(diffMs / 60000);
                     const diffSecs = Math.floor((diffMs % 60000) / 1000);
-                    console.log(`Time since last update: ${diffMins} minutes and ${diffSecs} seconds`);
                     let displayText = "Last updated ";
                     if (diffMins >= 10 & diffMins < 11) {
                         location.reload();

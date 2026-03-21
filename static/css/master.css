@@ -1,97 +1,35 @@
-html, body {
-    background-color: black;
-    color:white;
-    font-family: Arial, Helvetica, sans-serif;
-    margin: 10px;
+:root {
+    --primary-color: #82d4b6;
+    --secondary-color: #6c757d;
+    --accent-color: #28a745;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-color: #0c0c0c; 
+        --text-color: #ffffff;
     }
-
-#menu {
-    display: flex;
-    overflow: auto;
-    justify-content: center;
-    align-items: center;
-}
-#menu h1 {
-    padding: 0;
-    margin-right: 20px;
-}
-
-#menu ul {
-    margin: 0;
-    overflow-y: auto;
+    html, body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+    }
+    li {
+        color: var(--primary-color);
+        text-shadow: 0 0 10px var(--accent-color);
+    }
+    strong {
+        color: var(--secondary-color);
+        text-shadow: 0 0 5px var(--accent-color);
+    }
 }
 
-#topinfo {
-    padding: 0;
-    margin: 0;
-    list-style-type: none;
-}
-
-#topinfo li {
-    margin-left: 40px;
-    display: inline;
-}
-
-#sideinfo li {
-    margin: 10px;
-}
-
-a {
-    color: white;
-    text-decoration: none;
-}
-
-a h1 {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
-a:hover {
-    color: black;
-    background-color: white;
-}
-table, th, td {
-    border: 1px solid white;
-    border-collapse: collapse;
-    padding: 5px;
-}
-
-input[type=text] {
-    background-color: black;
-    color: white;
-    padding: 3px;
-    margin: 2px;
-    border: none;
-    border-bottom: 1px solid white;
-}
-
-input[type=text]:focus {
-    outline: none;
-}
-
-/* Container for the player list */
-.player-list-container {
-    display: grid;
-    /* This creates as many 200px columns as will fit on the screen */
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px;
-    padding: 20px;
-}
-
-/* Individual player name styling */
-.player-item {
-    background: #1a1a1a;
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px solid #333;
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.player-item:hover {
-    background: #333;
-    border-color: #555;
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg-color: #f0f0f0; 
+        --text-color: #000000;
+    }
+    html, body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+    }
 }
