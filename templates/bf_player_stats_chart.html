@@ -1,0 +1,266 @@
+<div style="width:90%;box-sizing:border-box;">
+
+<div style="display:flex;gap:0;margin-bottom:1rem;border-bottom:1px solid #333;">
+  <button onclick="setTab('combat')"      id="tab-combat"      class="tab-btn active-tab">Combat</button>
+  <button onclick="setTab('infected')"    id="tab-infected"    class="tab-btn">Infected</button>
+  <button onclick="setTab('progression')" id="tab-progression" class="tab-btn">Progression</button>
+  <button onclick="setTab('general')"     id="tab-general"     class="tab-btn">General</button>
+</div>
+
+<div id="legend" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0.75rem;"></div>
+
+<div style="display:flex;gap:6px;margin-bottom:0.75rem;align-items:center;flex-wrap:wrap;">
+  <span style="font-size:12px;color:#888;">Range:</span>
+  <button onclick="setRange(7)"    id="r7"   class="range-btn">7d</button>
+  <button onclick="setRange(30)"   id="r30"  class="range-btn">30d</button>
+  <button onclick="setRange(90)"   id="r90"  class="range-btn">90d</button>
+  <button onclick="setRange(null)" id="rAll" class="range-btn range-active">All</button>
+  <button onclick="toggleMode()" id="mode-btn" class="range-btn" style="margin-left:8px;">Showing: Growth</button>
+  <span style="font-size:11px;color:#555;margin-left:auto;">scroll to zoom · drag to pan · dbl-click to reset</span>
+</div>
+
+<div id="myplot" style="position:relative;width:100%;"></div>
+<div id="tooltip" ></div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script>
+const GROUPS = {
+  combat:      { stats: ['Kills','Deaths','Assists','Headshots','Backstabs','NoScopes','FirstBloods','FireKills','BotKills','VehicleKills'] },
+  infected:    { stats: ['InfectedKills','InfectedRoundsWon','InfectedMatchesWon'] },
+  progression: { stats: ['EXP','Prestige','RifleXP','LTRifleXP','AssaultXP','SupportXP','MedicXP','SniperXP','GunnerXP','AntiTankXP','CommanderXP'] },
+  general:     { stats: ['Wins','Games','TimePlayed','Karma','HighestKillStreak','HighestDeathStreak'] }
+};
+
+const DEFAULT_ACTIVE = {
+  combat:      new Set(['Kills','Deaths','Assists','Headshots']),
+  infected:    new Set(['InfectedKills','InfectedRoundsWon','InfectedMatchesWon']),
+  progression: new Set(['EXP','AssaultXP','SupportXP','MedicXP']),
+  general:     new Set(['Wins','Games','HighestKillStreak'])
+};
+
+const PALETTE = [
+  '#378ADD','#1D9E75','#D85A30','#D4537E','#BA7517',
+  '#639922','#7F77DD','#E24B4A','#5DCAA5','#F0997B',
+  '#888780','#0F6E56'
+];
+
+const raw = {{ raw_data | safe }};
+
+let currentTab = 'combat';
+let currentRange = null;
+let activeKeys = {};
+Object.keys(GROUPS).forEach(tab => { activeKeys[tab] = new Set(DEFAULT_ACTIVE[tab]); });
+
+const colorMap = {};
+let ci = 0;
+Object.values(GROUPS).forEach(g => {
+  g.stats.forEach(k => { colorMap[k] = PALETTE[ci++ % PALETTE.length]; });
+});
+
+let showDelta = true;
+
+if (raw && raw.length > 0) {
+  const baseline = Object.assign({}, raw[0]);
+  raw.forEach(d => {
+    d.date = new Date(d.Date);
+    Object.values(GROUPS).forEach(g => {
+      g.stats.forEach(k => {
+        if (d[k] !== undefined) {
+          d['_total_' + k] = +d[k];
+          d['_delta_' + k] = +d[k] - +(baseline[k] || 0);
+        }
+      });
+    });
+  });
+}
+
+function getVal(d, k) { return showDelta ? d['_delta_' + k] : d['_total_' + k]; }
+
+function setTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+  document.getElementById('tab-' + tab).classList.add('active-tab');
+  buildLegend();
+  renderChart();
+}
+
+function setRange(days) {
+  currentRange = days;
+  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('range-active'));
+  const map = { 7:'r7', 30:'r30', 90:'r90', null:'rAll' };
+  document.getElementById(map[days]).classList.add('range-active');
+  renderChart();
+}
+
+function toggleMode() {
+  showDelta = !showDelta;
+  document.getElementById('mode-btn').textContent = showDelta ? 'Showing: Growth' : 'Showing: Total';
+  renderChart();
+}
+
+function buildLegend() {
+  const el = document.getElementById('legend');
+  el.innerHTML = '';
+  const stats = GROUPS[currentTab].stats.filter(k => raw.length > 0 && raw[0][k] !== undefined);
+  stats.forEach(k => {
+    const active = activeKeys[currentTab].has(k);
+    const btn = document.createElement('button');
+    btn.className = 'stat-toggle';
+    btn.style.borderColor = active ? colorMap[k] : '#333';
+    btn.style.background  = active ? colorMap[k] + '22' : 'transparent';
+    btn.style.color       = active ? colorMap[k] : '#555';
+    const dot = document.createElement('span');
+    dot.style.cssText = `width:7px;height:7px;border-radius:50%;background:${active ? colorMap[k] : '#444'};flex-shrink:0;`;
+    btn.appendChild(dot);
+    btn.appendChild(document.createTextNode(k));
+    btn.onclick = () => {
+      if (activeKeys[currentTab].has(k)) {
+        if (activeKeys[currentTab].size > 1) activeKeys[currentTab].delete(k);
+      } else {
+        activeKeys[currentTab].add(k);
+      }
+      buildLegend();
+      renderChart();
+    };
+    el.appendChild(btn);
+  });
+}
+
+function renderChart() {
+  const container = document.getElementById('myplot');
+  container.innerHTML = '';
+
+  if (!raw || raw.length === 0) {
+    container.innerHTML = '<p style="color:#666;text-align:center;padding:2rem;">No data available.</p>';
+    return;
+  }
+
+  const activeArr = [...activeKeys[currentTab]].filter(k => raw[0][k] !== undefined);
+  if (activeArr.length === 0) return;
+
+  const allDates = raw.map(d => d.date);
+  const minDate = d3.min(allDates), maxDate = d3.max(allDates);
+  let startDate = minDate;
+  if (currentRange) {
+    const candidate = d3.timeDay.offset(maxDate, -currentRange);
+    startDate = candidate > minDate ? candidate : minDate;
+  }
+  const visData = raw.filter(d => d.date >= startDate);
+
+  const margin = { top: 16, right: 24, bottom: 36, left: 58 };
+  const totalW = container.clientWidth || 900;
+  const W = totalW - margin.left - margin.right;
+  const H = 300 - margin.top - margin.bottom;
+  const axisColor = '#444', gridColor = '#1e1e1e', textColor = '#666';
+
+  const x = d3.scaleTime().domain([startDate, maxDate]).range([0, W]);
+  const yMax = d3.max(visData, d => Math.max(...activeArr.map(k => getVal(d,k) || 0)));
+  const y = d3.scaleLinear().domain([0, yMax * 1.1 || 1]).nice().range([H, 0]);
+
+  const svg = d3.select(container).append('svg')
+    .attr('width', totalW)
+    .attr('height', H + margin.top + margin.bottom)
+    .append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+  svg.selectAll('.gl').data(y.ticks(5)).enter().append('line')
+    .attr('x1', 0).attr('x2', W)
+    .attr('y1', d => y(d)).attr('y2', d => y(d))
+    .attr('stroke', gridColor).attr('stroke-width', 1);
+
+  const xAxisG = svg.append('g').attr('class','x-axis').attr('transform', `translate(0,${H})`)
+    .call(d3.axisBottom(x).ticks(Math.floor(W/90)).tickSize(0).tickPadding(8))
+    .call(g => g.select('.domain').attr('stroke', axisColor))
+    .call(g => g.selectAll('text').style('fill', textColor).style('font-size','11px'));
+
+  svg.append('g')
+    .call(d3.axisLeft(y).ticks(5).tickSize(0).tickPadding(8)
+      .tickFormat(v => v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(0)+'k' : v))
+    .call(g => g.select('.domain').remove())
+    .call(g => g.selectAll('text').style('fill', textColor).style('font-size','11px'));
+
+  svg.append('clipPath').attr('id','clip').append('rect').attr('width', W).attr('height', H);
+  const linesG = svg.append('g').attr('clip-path','url(#clip)');
+
+  function drawLines(zx) {
+    linesG.selectAll('path').remove();
+    activeArr.forEach(k => {
+      linesG.append('path')
+        .datum(visData)
+        .attr('fill','none')
+        .attr('stroke', colorMap[k])
+        .attr('stroke-width', 2)
+        .attr('class', 'data-line')
+        .attr('d', d3.line().x(d => zx(d.date)).y(d => y(getVal(d,k)||0)).curve(d3.curveMonotoneX));
+    });
+  }
+  drawLines(x);
+
+  const focusG = svg.append('g').style('display','none');
+  focusG.append('line').attr('y1',0).attr('y2',H)
+    .attr('stroke','#555').attr('stroke-width',1).attr('stroke-dasharray','3,2');
+  const circles = focusG.selectAll('circle').data(activeArr).enter().append('circle')
+    .attr('r', 4).attr('fill', k => colorMap[k]).attr('stroke','#111').attr('stroke-width',1.5);
+
+  const tooltip = document.getElementById('tooltip');
+  const bisect = d3.bisector(d => d.date).left;
+  let currX = x;
+
+  const zoomBehavior = d3.zoom()
+    .extent([[0,0],[W,H]])
+    .on('zoom', event => {
+      let newX = event.transform.rescaleX(x);
+      let [d0, d1] = newX.domain();
+      if (d0 < minDate) { const dt = minDate-d0; d0=minDate; d1=new Date(d1.getTime()+dt); }
+      if (d1 > maxDate) { const dt = d1-maxDate; d1=maxDate; d0=new Date(d0.getTime()-dt); }
+      currX = d3.scaleTime().domain([d0,d1]).range([0,W]);
+      xAxisG.call(d3.axisBottom(currX).ticks(Math.floor(W/90)).tickSize(0).tickPadding(8))
+        .call(g => g.select('.domain').attr('stroke', axisColor))
+        .call(g => g.selectAll('text').style('fill', textColor).style('font-size','11px'));
+      drawLines(currX);
+    });
+
+  svg.append('rect').attr('width',W).attr('height',H)
+    .attr('fill','none').attr('pointer-events','all')
+    .call(zoomBehavior)
+    .on('dblclick.zoom', null)
+    .on('dblclick', () => {
+      currX = x;
+      xAxisG.call(d3.axisBottom(x).ticks(Math.floor(W/90)).tickSize(0).tickPadding(8))
+        .call(g => g.select('.domain').attr('stroke', axisColor))
+        .call(g => g.selectAll('text').style('fill', textColor).style('font-size','11px'));
+      drawLines(x);
+    })
+    .on('mouseover', () => { focusG.style('display',null); tooltip.style.display='block'; })
+    .on('mouseout',  () => { focusG.style('display','none'); tooltip.style.display='none'; })
+    .on('mousemove', function(event) {
+      const [mx] = d3.pointer(event);
+      const x0 = currX.invert(mx);
+      const i = bisect(visData, x0);
+      const d = visData[Math.max(0, i-1)];
+      if (!d) return;
+      focusG.attr('transform', `translate(${currX(d.date)},0)`);
+      circles.attr('cy', k => y(d[k]||0));
+      tooltip.innerHTML =
+        `<div style="color:#aaa;font-size:10px;margin-bottom:5px;">${d.date.toLocaleDateString()}</div>` +
+        activeArr.map(k =>
+          `<div style="display:flex;justify-content:space-between;gap:16px;">
+            <span style="color:${colorMap[k]};">● ${k}</span>
+            <span style="color:#ccc;">${(d['_total_'+k]||0).toLocaleString()} <span style="color:#555;">(+${(d[k]||0).toLocaleString()})</span></span>
+            <span style="color:#ccc;">${(d['_total_'+k]||0).toLocaleString()} <span style="color:#555;">(+${(d['_delta_'+k]||0).toLocaleString()})</span></span>
+          </div>`
+        ).join('');
+        const ttW = tooltip.offsetWidth || 180;
+        const ttH = tooltip.offsetHeight || 120;
+        const left = event.clientX + 16 + ttW > window.innerWidth  ? event.clientX - ttW - 8 : event.clientX + 16;
+        const top  = event.clientY - 10 + ttH > window.innerHeight ? event.clientY - ttH - 8 : event.clientY - 10;
+        tooltip.style.left = left + 'px';
+        tooltip.style.top  = top  + 'px';
+    });
+}
+
+buildLegend();
+renderChart();
+</script>

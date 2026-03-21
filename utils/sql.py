@@ -303,27 +303,43 @@ def graph_data():
     output = "[\n" + ",\n".join(formatted_entries) + "\n]" 
     return output
 
-def player_graph_data(player_id):   
-    """ Query date and select columns from player_stats table for graphing """
+def player_graph_data(player_id):
+    """Query all stat columns from player_stats table for graphing"""
     with get_cursor() as cur:
         cur.execute("""
-            SELECT date, kills, deaths, assists, headshots, match_wins, total_games 
-            FROM player_stats 
-            WHERE player_id = ? 
+            SELECT date, kills, deaths, assists, headshots, backstabs, no_scopes,
+                   first_bloods, fire_kills, bot_kills, vehicle_kills,
+                   infected_kills, infected_rounds_won, infected_matches_won,
+                   highest_kill_streak, highest_death_streak, match_karma,
+                   match_wins, total_games, time_played,
+                   exp, prestige, rifle_xp, lt_rifle_xp, assault_xp,
+                   support_xp, medic_xp, sniper_xp, gunner_xp,
+                   anti_tank_xp, commander_xp
+            FROM player_stats
+            WHERE player_id = ?
             ORDER BY date ASC
         """, (player_id,))
         rows = cur.fetchall()
-        
+
     formatted_entries = []
     for row in rows:
-        date_str, kills, deaths, assists, headshots, match_wins, total_games = row
-        formatted_entries.append(
-            f'  {{Date: "{date_str}", Kills: {kills}, Deaths: {deaths}, '
-            f'Assists: {assists}, Headshots: {headshots}, Wins: {match_wins}, Games: {total_games}}}'
-        )
+        formatted_entries.append({
+            "Date": row[0],
+            "Kills": row[1],       "Deaths": row[2],      "Assists": row[3],
+            "Headshots": row[4],   "Backstabs": row[5],   "NoScopes": row[6],
+            "FirstBloods": row[7], "FireKills": row[8],   "BotKills": row[9],
+            "VehicleKills": row[10],
+            "InfectedKills": row[11], "InfectedRoundsWon": row[12], "InfectedMatchesWon": row[13],
+            "HighestKillStreak": row[14], "HighestDeathStreak": row[15],
+            "Karma": row[16],      "Wins": row[17],       "Games": row[18],
+            "TimePlayed": row[19],
+            "EXP": row[20],        "Prestige": row[21],   "RifleXP": row[22],
+            "LTRifleXP": row[23],  "AssaultXP": row[24],  "SupportXP": row[25],
+            "MedicXP": row[26],    "SniperXP": row[27],   "GunnerXP": row[28],
+            "AntiTankXP": row[29], "CommanderXP": row[30]
+        })
 
-    output = "[\n" + ",\n".join(formatted_entries) + "\n]" 
-    return output
+    return json.dumps(formatted_entries)
 
 def clear_cloud_stats():
     """ Delete all rows in the stats table """

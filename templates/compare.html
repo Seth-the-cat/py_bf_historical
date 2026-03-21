@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BF historical - Compare Players</title>
+<link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/master.css')}}"/>
+<link type="text/css" rel="stylesheet" href="{{url_for('static', filename='css/index.css')}}"/>
+<style>
+html { color: white; background-color: black; }
+* { box-sizing: border-box; }
+.tab-btn {
+  padding: 7px 18px; font-size: 13px; background: transparent;
+  border: none; border-bottom: 2px solid transparent;
+  color: #666; cursor: pointer; margin-bottom: -1px; transition: color 0.15s;
+}
+.tab-btn:hover { color: #ccc; }
+.active-tab { color: #fff !important; border-bottom-color: #378ADD !important; }
+.range-btn {
+  font-size: 12px; padding: 3px 10px; border-radius: 4px;
+  border: 1px solid #444; background: transparent; color: #888; cursor: pointer; transition: all 0.15s;
+}
+.range-btn:hover { color: #ccc; border-color: #666; }
+.range-active { border-color: #378ADD !important; background: rgba(55,138,221,0.15) !important; color: #378ADD !important; }
+.stat-toggle {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+  border-radius: 4px; font-size: 12px; cursor: pointer;
+  border: 1px solid #444; background: transparent; color: #666; transition: all 0.15s;
+}
+.player-search-wrap { position: relative; flex: 1; }
+.player-search-wrap input {
+  width: 100%; padding: 8px 12px; background: #111; border: 1px solid #444;
+  border-radius: 6px; color: white; font-size: 14px; outline: none;
+}
+.player-search-wrap input:focus { border-color: #666; }
+.dropdown {
+  position: absolute; top: 100%; left: 0; right: 0; background: #111;
+  border: 1px solid #444; border-top: none; border-radius: 0 0 6px 6px;
+  max-height: 200px; overflow-y: auto; z-index: 100; display: none;
+}
+.dropdown-item {
+  padding: 8px 12px; cursor: pointer; font-size: 13px; color: #ccc;
+}
+.dropdown-item:hover { background: #1e1e1e; color: white; }
+.compare-btn {
+  padding: 8px 24px; background: #378ADD; border: none; border-radius: 6px;
+  color: white; font-size: 14px; cursor: pointer; transition: background 0.15s;
+}
+.compare-btn:hover { background: #2a6fad; }
+.compare-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+.player-label-p1 { color: #378ADD; font-weight: 500; }
+.player-label-p2 { color: #D85A30; font-weight: 500; }
+</style>
+</head>
+<body>
+{% include 'nav.html' %}
+<main style="width:100%;padding:0 1.5rem;">
+
+  <h2 style="text-align:center;margin-bottom:1.5rem;">Compare Players</h2>
+
+  <div style="display:flex;gap:12px;align-items:center;max-width:600px;margin:0 auto 2rem;">
+    <div class="player-search-wrap">
+      <input type="text" id="search1" placeholder="Player 1..." autocomplete="off" oninput="filterDropdown(1)">
+      <div class="dropdown" id="drop1"></div>
+    </div>
+    <span style="color:#555;font-size:18px;">vs</span>
+    <div class="player-search-wrap">
+      <input type="text" id="search2" placeholder="Player 2..." autocomplete="off" oninput="filterDropdown(2)">
+      <div class="dropdown" id="drop2"></div>
+    </div>
+    <button class="compare-btn" id="compare-btn" onclick="loadComparison()" disabled>Compare</button>
+  </div>
+
+  <div id="compare-area" style="display:none;">
+    <div style="display:flex;gap:0;margin-bottom:1rem;border-bottom:1px solid #333;">
+      <button onclick="setTab('combat')"      id="tab-combat"      class="tab-btn active-tab">Combat</button>
+      <button onclick="setTab('infected')"    id="tab-infected"    class="tab-btn">Infected</button>
+      <button onclick="setTab('progression')" id="tab-progression" class="tab-btn">Progression</button>
+      <button onclick="setTab('general')"     id="tab-general"     class="tab-btn">General</button>
+    </div>
+
+    <div id="legend" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0.75rem;"></div>
+
+    <div style="display:flex;gap:6px;margin-bottom:0.75rem;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:12px;color:#888;">Range:</span>
+      <button onclick="setRange(7)"    id="r7"   class="range-btn">7d</button>
+      <button onclick="setRange(30)"   id="r30"  class="range-btn">30d</button>
+      <button onclick="setRange(90)"   id="r90"  class="range-btn">90d</button>
+      <button onclick="setRange(null)" id="rAll" class="range-btn range-active">All</button>
+      <button onclick="toggleMode()"   id="mode-btn" class="range-btn" style="margin-left:8px;">Showing: Growth</button>
+      <span style="font-size:11px;color:#555;margin-left:auto;">
+        <span class="player-label-p1" id="legend-p1-name">Player 1</span> = solid &nbsp;
+        <span class="player-label-p2" id="legend-p2-name">Player 2</span> = dashed
+      </span>
+    </div>
+
+    <div id="myplot" style="position:relative;width:100%;"></div>
+  </div>
+
+  <div id="error-msg" style="display:none;text-align:center;color:#E24B4A;padding:1rem;"></div>
+  <div id="tooltip" style="position:fixed;pointer-events:none;background:#111;border:1px solid #444;border-radius:6px;padding:10px 12px;font-size:12px;display:none;z-index:1000;line-height:1.7;min-width:200px;font-family:sans-serif;"></div>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script>
+const GROUPS = {
+  combat:      { stats: ['Kills','Deaths','Assists','Headshots','Backstabs','NoScopes','FirstBloods','FireKills','BotKills','VehicleKills'] },
+  infected:    { stats: ['InfectedKills','InfectedRoundsWon','InfectedMatchesWon'] },
+  progression: { stats: ['EXP','Prestige','RifleXP','LTRifleXP','AssaultXP','SupportXP','MedicXP','SniperXP','GunnerXP','AntiTankXP','CommanderXP'] },
+  general:     { stats: ['Wins','Games','TimePlayed','Karma','HighestKillStreak','HighestDeathStreak'] }
+};
+const DEFAULT_ACTIVE = {
+  combat:      ['Kills','Deaths','Assists','Headshots'],
+  infected:    ['InfectedKills','InfectedRoundsWon','InfectedMatchesWon'],
+  progression: ['EXP','AssaultXP','SupportXP','MedicXP'],
+  general:     ['Wins','Games','HighestKillStreak']
+};
+const P1_COLOR = '#378ADD';
+const P2_COLOR = '#D85A30';
+
+let allPlayers = [];
+let selected = { 1: null, 2: null };
+let p1data = [], p2data = [];
+let currentTab = 'combat';
+let currentRange = null;
+let showDelta = true;
+let activeKeys = {};
+Object.keys(GROUPS).forEach(tab => { activeKeys[tab] = new Set(DEFAULT_ACTIVE[tab]); });
+
+function getVal(d, k) { return showDelta ? (d['_delta_'+k] || 0) : (d['_total_'+k] || 0); }
+
+// Load player list
+fetch('/api/players').then(r => r.json()).then(names => {
+  allPlayers = names;
+});
+
+function filterDropdown(n) {
+  const input = document.getElementById('search' + n);
+  const drop  = document.getElementById('drop' + n);
+  const q = input.value.trim().toLowerCase();
+  if (!q) { drop.style.display = 'none'; return; }
+  const matches = allPlayers.filter(p => p.toLowerCase().includes(q)).slice(0, 10);
+  if (!matches.length) { drop.style.display = 'none'; return; }
+  drop.innerHTML = matches.map(p =>
+    `<div class="dropdown-item" onclick="selectPlayer(${n}, '${p}')">${p}</div>`
+  ).join('');
+  drop.style.display = 'block';
+}
+
+function selectPlayer(n, name) {
+  selected[n] = name;
+  document.getElementById('search' + n).value = name;
+  document.getElementById('drop' + n).style.display = 'none';
+  document.getElementById('compare-btn').disabled = !(selected[1] && selected[2]);
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.player-search-wrap')) {
+    document.getElementById('drop1').style.display = 'none';
+    document.getElementById('drop2').style.display = 'none';
+  }
+});
+
+function loadComparison() {
+  if (!selected[1] || !selected[2]) return;
+  if (selected[1] === selected[2]) {
+    showError('Please select two different players.');
+    return;
+  }
+  document.getElementById('error-msg').style.display = 'none';
+  document.getElementById('compare-area').style.display = 'none';
+
+  fetch(`/api/compare?p1=${encodeURIComponent(selected[1])}&p2=${encodeURIComponent(selected[2])}`)
+    .then(r => r.json())
+    .then(resp => {
+      if (resp.error) { showError(resp.error); return; }
+      processData(resp.p1.data, 'p1');
+      processData(resp.p2.data, 'p2');
+      p1data = resp.p1.data;
+      p2data = resp.p2.data;
+      document.getElementById('legend-p1-name').textContent = resp.p1.name;
+      document.getElementById('legend-p2-name').textContent = resp.p2.name;
+      document.getElementById('compare-area').style.display = 'block';
+      buildLegend();
+      renderChart();
+    })
+    .catch(() => showError('Failed to load comparison data.'));
+}
+
+function processData(data, prefix) {
+  if (!data.length) return;
+  const baseline = Object.assign({}, data[0]);
+  data.forEach(d => {
+    d.date = new Date(d.Date);
+    Object.values(GROUPS).forEach(g => {
+      g.stats.forEach(k => {
+        if (d[k] !== undefined) {
+          d['_total_'+k] = +d[k];
+          d['_delta_'+k] = +d[k] - +(baseline[k] || 0);
+        }
+      });
+    });
+  });
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function setTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+  document.getElementById('tab-' + tab).classList.add('active-tab');
+  buildLegend();
+  renderChart();
+}
+
+function setRange(days) {
+  currentRange = days;
+  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('range-active'));
+  const map = {7:'r7',30:'r30',90:'r90',null:'rAll'};
+  document.getElementById(map[days]).classList.add('range-active');
+  renderChart();
+}
+
+function toggleMode() {
+  showDelta = !showDelta;
+  document.getElementById('mode-btn').textContent = showDelta ? 'Showing: Growth' : 'Showing: Total';
+  renderChart();
+}
+
+function buildLegend() {
+  const el = document.getElementById('legend');
+  el.innerHTML = '';
+  const stats = GROUPS[currentTab].stats.filter(k => p1data.length > 0 && p1data[0][k] !== undefined);
+  stats.forEach(k => {
+    const active = activeKeys[currentTab].has(k);
+    const btn = document.createElement('button');
+    btn.className = 'stat-toggle';
+    btn.style.borderColor = active ? '#888' : '#333';
+    btn.style.background  = active ? 'rgba(255,255,255,0.07)' : 'transparent';
+    btn.style.color       = active ? '#ccc' : '#555';
+    const dot = document.createElement('span');
+    dot.style.cssText = `width:7px;height:7px;border-radius:50%;background:${active ? '#aaa' : '#444'};flex-shrink:0;`;
+    btn.appendChild(dot);
+    btn.appendChild(document.createTextNode(k));
+    btn.onclick = () => {
+      if (activeKeys[currentTab].has(k)) {
+        if (activeKeys[currentTab].size > 1) activeKeys[currentTab].delete(k);
+      } else {
+        activeKeys[currentTab].add(k);
+      }
+      buildLegend();
+      renderChart();
+    };
+    el.appendChild(btn);
+  });
+}
+
+function renderChart() {
+  const container = document.getElementById('myplot');
+  container.innerHTML = '';
+  if (!p1data.length && !p2data.length) return;
+
+  const activeArr = [...activeKeys[currentTab]].filter(k =>
+    (p1data.length && p1data[0][k] !== undefined) ||
+    (p2data.length && p2data[0][k] !== undefined)
+  );
+  if (!activeArr.length) return;
+
+  const allDates = [...p1data, ...p2data].map(d => d.date);
+  const minDate = d3.min(allDates), maxDate = d3.max(allDates);
+  let startDate = minDate;
+  if (currentRange) {
+    const candidate = d3.timeDay.offset(maxDate, -currentRange);
+    startDate = candidate > minDate ? candidate : minDate;
+  }
+
+  const vis1 = p1data.filter(d => d.date >= startDate);
+  const vis2 = p2data.filter(d => d.date >= startDate);
+
+  const margin = { top: 16, right: 24, bottom: 36, left: 58 };
+  const totalW = container.clientWidth || 900;
+  const W = totalW - margin.left - margin.right;
+  const H = 320 - margin.top - margin.bottom;
+  const axisColor = '#444', gridColor = '#1e1e1e', textColor = '#666';
+
+  const x = d3.scaleTime().domain([startDate, maxDate]).range([0, W]);
+  const allVis = [...vis1, ...vis2];
+  const yMax = d3.max(allVis, d => Math.max(...activeArr.map(k => getVal(d, k))));
+  const y = d3.scaleLinear().domain([0, yMax * 1.1 || 1]).nice().range([H, 0]);
+
+  const svg = d3.select(container).append('svg')
+    .attr('width', totalW)
+    .attr('height', H + margin.top + margin.bottom)
+    .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  svg.selectAll('.gl').data(y.ticks(5)).enter().append('line')
+    .attr('x1',0).attr('x2',W).attr('y1',d=>y(d)).attr('y2',d=>y(d))
+    .attr('stroke',gridColor).attr('stroke-width',1);
+
+  const xAxisG = svg.append('g').attr('class','x-axis').attr('transform',`translate(0,${H})`)
+    .call(d3.axisBottom(x).ticks(Math.floor(W/90)).tickSize(0).tickPadding(8))
+    .call(g=>g.select('.domain').attr('stroke',axisColor))
+    .call(g=>g.selectAll('text').style('fill',textColor).style('font-size','11px'));
+
+  svg.append('g')
+    .call(d3.axisLeft(y).ticks(5).tickSize(0).tickPadding(8)
+      .tickFormat(v => v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'k':v))
+    .call(g=>g.select('.domain').remove())
+    .call(g=>g.selectAll('text').style('fill',textColor).style('font-size','11px'));
+
+  svg.append('clipPath').attr('id','clip').append('rect').attr('width',W).attr('height',H);
+  const linesG = svg.append('g').attr('clip-path','url(#clip)');
+
+  function drawLines(zx) {
+    linesG.selectAll('path').remove();
+    activeArr.forEach(k => {
+      // P1 solid
+      if (vis1.length) {
+        linesG.append('path').datum(vis1)
+          .attr('fill','none').attr('stroke', P1_COLOR).attr('stroke-width',2)
+          .attr('d', d3.line().x(d=>zx(d.date)).y(d=>y(getVal(d,k))).curve(d3.curveMonotoneX));
+      }
+      // P2 dashed
+      if (vis2.length) {
+        linesG.append('path').datum(vis2)
+          .attr('fill','none').attr('stroke', P2_COLOR).attr('stroke-width',2)
+          .attr('stroke-dasharray','6,3')
+          .attr('d', d3.line().x(d=>zx(d.date)).y(d=>y(getVal(d,k))).curve(d3.curveMonotoneX));
+      }
+    });
+  }
+  drawLines(x);
+
+  // hover
+  const focusG = svg.append('g').style('display','none');
+  focusG.append('line').attr('y1',0).attr('y2',H)
+    .attr('stroke','#555').attr('stroke-width',1).attr('stroke-dasharray','3,2');
+
+  const tooltip = document.getElementById('tooltip');
+  const bisect1 = d3.bisector(d => d.date).left;
+  const bisect2 = d3.bisector(d => d.date).left;
+  let currX = x;
+
+  const zoomBehavior = d3.zoom().extent([[0,0],[W,H]]).on('zoom', event => {
+    let newX = event.transform.rescaleX(x);
+    let [d0,d1] = newX.domain();
+    if (d0 < minDate) { const dt=minDate-d0; d0=minDate; d1=new Date(d1.getTime()+dt); }
+    if (d1 > maxDate) { const dt=d1-maxDate; d1=maxDate; d0=new Date(d0.getTime()-dt); }
+    currX = d3.scaleTime().domain([d0,d1]).range([0,W]);
+    xAxisG.call(d3.axisBottom(currX).ticks(Math.floor(W/90)).tickSize(0).tickPadding(8))
+      .call(g=>g.select('.domain').attr('stroke',axisColor))
+      .call(g=>g.selectAll('text').style('fill',textColor).style('font-size','11px'));
+    drawLines(currX);
+  });
+
+  svg.append('rect').attr('width',W).attr('height',H)
+    .attr('fill','none').attr('pointer-events','all')
+    .call(zoomBehavior)
+    .on('dblclick.zoom',null)
+    .on('dblclick', () => {
+      currX = x;
+      xAxisG.call(d3.axisBottom(x).ticks(Math.floor(W/90)).tickSize(0).tickPadding(8))
+        .call(g=>g.select('.domain').attr('stroke',axisColor))
+        .call(g=>g.selectAll('text').style('fill',textColor).style('font-size','11px'));
+      drawLines(x);
+    })
+    .on('mouseover', () => { focusG.style('display',null); tooltip.style.display='block'; })
+    .on('mouseout',  () => { focusG.style('display','none'); tooltip.style.display='none'; })
+    .on('mousemove', function(event) {
+      const [mx] = d3.pointer(event);
+      const x0 = currX.invert(mx);
+      const i1 = bisect1(vis1, x0);
+      const i2 = bisect2(vis2, x0);
+      const d1 = vis1[Math.max(0, i1-1)];
+      const d2 = vis2[Math.max(0, i2-1)];
+      if (!d1 && !d2) return;
+
+      const refDate = (d1 || d2).date;
+      focusG.attr('transform', `translate(${currX(refDate)},0)`);
+
+      const p1name = document.getElementById('legend-p1-name').textContent;
+      const p2name = document.getElementById('legend-p2-name').textContent;
+
+      let html = `<div style="color:#aaa;font-size:10px;margin-bottom:5px;">${refDate.toLocaleDateString()}</div>`;
+      activeArr.forEach(k => {
+        const v1 = d1 ? getVal(d1, k) : '—';
+        const v2 = d2 ? getVal(d2, k) : '—';
+        const diff = (d1 && d2) ? getVal(d1,k) - getVal(d2,k) : null;
+        const diffStr = diff !== null
+          ? `<span style="color:${diff>0?'#1D9E75':diff<0?'#E24B4A':'#666'};">${diff>0?'+':''}${diff.toLocaleString()}</span>`
+          : '';
+        html += `<div style="margin-bottom:3px;">
+          <span style="color:#aaa;font-size:11px;">${k}</span><br>
+          <span style="color:${P1_COLOR};">${p1name}: ${typeof v1==='number'?v1.toLocaleString():v1}</span> &nbsp;
+          <span style="color:${P2_COLOR};">${p2name}: ${typeof v2==='number'?v2.toLocaleString():v2}</span>
+          ${diffStr ? '&nbsp;('+diffStr+')' : ''}
+        </div>`;
+      });
+
+      const ttW = tooltip.offsetWidth || 220;
+      const ttH = tooltip.offsetHeight || 140;
+      const left = event.clientX+16+ttW > window.innerWidth  ? event.clientX-ttW-8 : event.clientX+16;
+      const top  = event.clientY-10+ttH > window.innerHeight ? event.clientY-ttH-8 : event.clientY-10;
+      tooltip.innerHTML = html;
+      tooltip.style.left = left + 'px';
+      tooltip.style.top  = top  + 'px';
+    });
+}
+</script>
+</body>
+</html>

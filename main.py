@@ -1,6 +1,7 @@
 import atexit
 import logging
-from flask import Flask, render_template, request
+from flask import Flask, render_template, jsonify, request
+import json
 from fetchStats import fetchStats, fetchMatchStats
 import utils.sql as sql
 import utils.html
@@ -85,7 +86,7 @@ def players_over_time():
 # Show chart page for testing. Maybe redo graph with d3.js later
 @app.route("/chart")
 def chartPage():
-    return render_template('e.html', raw_data=sql.graph_data())
+    return render_template('bf_player_stats_chart.html', raw_data=sql.player_graph_data("seththecat24"))
 
 @app.route('/api/addplayer', methods=['POST'])
 def track_player():
@@ -104,15 +105,48 @@ def check_if_tracking(username):
     if sql.check_player(username):
         test = sql.get_player_id_by_name(username)
         app.logger.info(f"Player_id: {test}")
-        app.logger.debug(sql.player_graph_data(test))
-        return render_template('player.html', response=utils.html.gen_html_table_from_player_stats(sql.get_player_stats(test)), raw_data=sql.player_graph_data(test))
+        graph_data = sql.player_graph_data(test)
+        app.logger.debug(f"Graph data: {graph_data}")
+        return render_template('player.html',
+            name=username,
+            raw_data=graph_data
+        )
     else:
-        return render_template('player.html', response=f"<i>{username}</i>'s stats are not being tracked. <br> <a href='/addplayer'>Click here to add them.</a>")
+        return render_template('player.html',
+            name=username,
+            response=f"<i>{username}</i>'s stats are not being tracked. <br> <a href='/addplayer'>Click here to add them.</a>",
+            raw_data='[]'  # ← safe empty fallback
+        )
+    
 
 @app.route('/findplayer')
 def find_player():
     # print(sql.get_players_names())
     return render_template('findplayer.html', players=sql.get_players_names())
+
+@app.route('/compare')
+def compare():
+    return render_template('compare.html')
+
+@app.route('/api/players')
+def api_players():
+    rows = sql.get_players_names()
+    return jsonify([row[0] for row in rows])
+
+@app.route('/api/compare')
+def api_compare():
+    p1 = request.args.get('p1')
+    p2 = request.args.get('p2')
+    if not p1 or not p2:
+        return jsonify({'error': 'Two players required'}), 400
+    id1 = sql.get_player_id_by_name(p1)
+    id2 = sql.get_player_id_by_name(p2)
+    if not id1 or not id2:
+        return jsonify({'error': 'Player not found'}), 404
+    return jsonify({
+        'p1': {'name': p1, 'data': json.loads(sql.player_graph_data(id1))},
+        'p2': {'name': p2, 'data': json.loads(sql.player_graph_data(id2))}
+    })
 
 @app.errorhandler(404)
 def not_found(e):
