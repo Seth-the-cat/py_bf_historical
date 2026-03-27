@@ -1,0 +1,40 @@
+name: Build and Publish Docker Image
+
+on:
+  push:
+    branches: [ "Production" ]
+
+env:
+  REGISTRY: ghcr.io
+  
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # THIS STEP SOLVES THE PR & CAPITAL LETTER ISSUE DYNAMICALLY
+      - name: Convert repository name to lowercase
+        run: |
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile # The file specified in your image snippet
+          push: true
+          # This dynamically generates 'ghcr.io/seth-the-cat/py_bf_historical:latest'
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
